@@ -1,0 +1,29 @@
+# INTENT (for AI):
+# - Purpose: Keep local/dev artifacts out of version control for a clean repo and reproducible clones.
+# - Invariants: Source code under src/ and tests/ should remain tracked; only generated or machine-local files are ignored.
+# - Used by: Contributors working locally; CI; packaging workflows.
+# - Safe to refactor: Yes, as long as it continues to ignore generated artifacts and does not ignore project source.
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# Packaging/build artifacts
+build/
+dist/
+*.egg-info/
+
+# Test / coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local agent/editor config
+.claude/
+
+# macOS
+.DS_Store
