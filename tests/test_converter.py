@@ -521,7 +521,7 @@ class TestBrandStyling:
                                 assert run.font.name == "Open Sans"
 
     def test_h1_uses_correct_size(self):
-        """H1 title should use 32pt font size."""
+        """H1 title should use 28pt font size (issue #3)."""
         converter = MarkdownToPptxConverter()
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "test.pptx")
@@ -535,10 +535,10 @@ class TestBrandStyling:
                     for para in shape.text_frame.paragraphs:
                         for run in para.runs:
                             if "Test Title" in run.text:
-                                assert run.font.size.pt == 32
+                                assert run.font.size.pt == 28
 
     def test_h2_uses_correct_size(self):
-        """H2 title should use 24pt font size."""
+        """H2 title should use 28pt font size (issue #3)."""
         content = """## Section Header
 
 Content here
@@ -556,10 +556,10 @@ Content here
                     for para in shape.text_frame.paragraphs:
                         for run in para.runs:
                             if "Section Header" in run.text:
-                                assert run.font.size.pt == 24
+                                assert run.font.size.pt == 28
 
     def test_body_uses_correct_size(self):
-        """Body text should use 11pt font size."""
+        """Body text should use 16pt font size (issue #3)."""
         content = """## Slide
 
 - Body text here
@@ -577,7 +577,87 @@ Content here
                     for para in shape.text_frame.paragraphs:
                         for run in para.runs:
                             if "Body text here" in run.text:
-                                assert run.font.size.pt == 11
+                                assert run.font.size.pt == 16
+
+
+class TestStyleEnhancements:
+    """Test style enhancements from issue #3."""
+
+    def test_child_items_use_dark_grey(self):
+        """Child list items should use dark grey color (#404040)."""
+        content = """## Slide
+
+- Parent item
+  - Child item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_child = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Child item" in run.text:
+                                assert run.font.color.rgb == (0x40, 0x40, 0x40)
+                                found_child = True
+            assert found_child is True
+
+    def test_parent_items_use_woodsmoke(self):
+        """Parent list items should use Woodsmoke color (#111417)."""
+        content = """## Slide
+
+- Parent item
+  - Child item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_parent = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Parent item" in run.text:
+                                assert run.font.color.rgb == (0x11, 0x14, 0x17)
+                                found_parent = True
+            assert found_parent is True
+
+    def test_list_items_have_spacing(self):
+        """List items should have 4 spaces after bullet/number."""
+        content = """## Slide
+
+- Test item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find the content shape and verify spacing run exists
+            found_spacing = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        runs = list(para.runs)
+                        # First run should be 4 spaces
+                        for i, run in enumerate(runs):
+                            if run.text == "    ":
+                                found_spacing = True
+            assert found_spacing is True
 
 
 class TestLogoPlacement:

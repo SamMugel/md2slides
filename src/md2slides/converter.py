@@ -22,19 +22,24 @@ BULLET_CHARS = ['•', '–', '◦', '▪']
 BRAND_RED = RGBColor(0xFF, 0x00, 0x00)  # #FF0000 - accent color
 BRAND_CATSKILL_WHITE = RGBColor(0xF8, 0xFA, 0xFC)  # #F8FAFC - light background
 BRAND_WOODSMOKE = RGBColor(0x11, 0x14, 0x17)  # #111417 - dark text
+BRAND_DARK_GREY = RGBColor(0x40, 0x40, 0x40)  # #404040 - child list items
 
-# Typography sizes (from style.md)
-FONT_SIZE_H1 = Pt(32)
-FONT_SIZE_H2 = Pt(24)
-FONT_SIZE_BODY = Pt(11)
+# Typography sizes (issue #3 enhancements)
+FONT_SIZE_TITLE = Pt(28)  # Title size (issue #3: increase to 28pt)
+FONT_SIZE_H1 = Pt(28)  # H1 uses same as title
+FONT_SIZE_H2 = Pt(28)  # H2 uses same as title
+FONT_SIZE_BODY = Pt(16)  # Body text (issue #3: increase to 16pt)
 
 # Font families (from style.md)
 FONT_HEADER = "Montserrat"
 FONT_BODY = "Open Sans"
 
-# Logo settings
-LOGO_WIDTH = Inches(1.5)
+# Logo settings (issue #3: increase by 3x)
+LOGO_WIDTH = Inches(4.5)  # 1.5 * 3 = 4.5 inches
 LOGO_MARGIN = Inches(0.5)
+
+# List formatting (issue #3: add 4 spaces after bullet/number)
+LIST_ITEM_SPACING = "    "  # 4 spaces after bullet/number
 
 
 class MarkdownToPptxConverter:
@@ -144,8 +149,11 @@ class MarkdownToPptxConverter:
         slide_height = self._prs.slide_height
 
         # Calculate logo position (bottom-right with margin)
+        # Logo is now 3x larger (4.5 inches), adjust position accordingly
         logo_left = slide_width - LOGO_WIDTH - LOGO_MARGIN
-        logo_top = slide_height - Inches(0.6) - LOGO_MARGIN
+        # Estimate logo height based on aspect ratio (original was ~0.26" at 1.5" width)
+        estimated_logo_height = Inches(0.78)  # 0.26 * 3 = 0.78 inches
+        logo_top = slide_height - estimated_logo_height - LOGO_MARGIN
 
         slide.shapes.add_picture(
             self._logo_path,
@@ -322,6 +330,16 @@ class MarkdownToPptxConverter:
                     bullet_char = BULLET_CHARS[min(item.level, len(BULLET_CHARS) - 1)]
                     buChar.set('char', bullet_char)
 
+                # Determine text color based on nesting level (issue #3)
+                text_color = BRAND_DARK_GREY if item.level > 0 else BRAND_WOODSMOKE
+
+                # Add 4 spaces after bullet/number (issue #3)
+                spacing_run = para.add_run()
+                spacing_run.text = LIST_ITEM_SPACING
+                spacing_run.font.size = FONT_SIZE_BODY
+                spacing_run.font.name = FONT_BODY
+                spacing_run.font.color.rgb = text_color
+
                 # Add content with formatting
                 for text_run in item.content:
                     run = para.add_run()
@@ -330,7 +348,7 @@ class MarkdownToPptxConverter:
                     run.font.name = FONT_BODY
                     run.font.bold = text_run.bold
                     run.font.italic = text_run.italic
-                    run.font.color.rgb = BRAND_WOODSMOKE
+                    run.font.color.rgb = text_color
 
             elif isinstance(item, TextRun):
                 if first_item:
