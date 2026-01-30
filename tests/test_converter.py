@@ -445,3 +445,183 @@ class TestListFormatting:
 
             assert has_bullet is True
             assert has_number is True
+
+
+class TestBrandStyling:
+    """Test Multiverse Computing brand styling."""
+
+    def test_slide_has_brand_background_color(self):
+        """Slides should have Catskill White background (#F8FAFC)."""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert("# Test Title", output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Check background color
+            bg_fill = slide.background.fill
+            assert bg_fill.fore_color.rgb == (0xF8, 0xFA, 0xFC)
+
+    def test_title_uses_brand_text_color(self):
+        """Title text should use Woodsmoke color (#111417)."""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert("# Test Title", output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find title text and check color
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Test Title" in run.text:
+                                assert run.font.color.rgb == (0x11, 0x14, 0x17)
+
+    def test_title_uses_montserrat_font(self):
+        """Title text should use Montserrat font."""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert("# Test Title", output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Test Title" in run.text:
+                                assert run.font.name == "Montserrat"
+
+    def test_body_uses_open_sans_font(self):
+        """Body text should use Open Sans font."""
+        content = """## Slide
+
+- Body text here
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Body text here" in run.text:
+                                assert run.font.name == "Open Sans"
+
+    def test_h1_uses_correct_size(self):
+        """H1 title should use 32pt font size."""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert("# Test Title", output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Test Title" in run.text:
+                                assert run.font.size.pt == 32
+
+    def test_h2_uses_correct_size(self):
+        """H2 title should use 24pt font size."""
+        content = """## Section Header
+
+Content here
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Header" in run.text:
+                                assert run.font.size.pt == 24
+
+    def test_body_uses_correct_size(self):
+        """Body text should use 11pt font size."""
+        content = """## Slide
+
+- Body text here
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Body text here" in run.text:
+                                assert run.font.size.pt == 11
+
+
+class TestLogoPlacement:
+    """Test Multiverse Computing logo placement."""
+
+    def test_logo_added_to_title_slide(self):
+        """Title slide should have logo when logo file exists."""
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert("# Test Title", output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Check if logo path was found (depends on resources folder existing)
+            if converter._logo_path:
+                has_picture = any(
+                    shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+                    for shape in slide.shapes
+                )
+                assert has_picture is True
+
+    def test_logo_added_to_content_slide(self):
+        """Content slide should have logo when logo file exists."""
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+        content = """## Slide
+
+Content here
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            if converter._logo_path:
+                has_picture = any(
+                    shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+                    for shape in slide.shapes
+                )
+                assert has_picture is True

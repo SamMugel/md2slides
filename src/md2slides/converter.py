@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 from lxml import etree
 from pptx import Presentation
@@ -18,13 +18,63 @@ from md2slides.parser import ListItem, MarkdownParser, Slide, TextRun, Validatio
 # Bullet characters for different indentation levels
 BULLET_CHARS = ['•', '–', '◦', '▪']
 
+# Multiverse Computing Brand Colors (from style.md)
+BRAND_RED = RGBColor(0xFF, 0x00, 0x00)  # #FF0000 - accent color
+BRAND_CATSKILL_WHITE = RGBColor(0xF8, 0xFA, 0xFC)  # #F8FAFC - light background
+BRAND_WOODSMOKE = RGBColor(0x11, 0x14, 0x17)  # #111417 - dark text
+
+# Typography sizes (from style.md)
+FONT_SIZE_H1 = Pt(32)
+FONT_SIZE_H2 = Pt(24)
+FONT_SIZE_BODY = Pt(11)
+
+# Font families (from style.md)
+FONT_HEADER = "Montserrat"
+FONT_BODY = "Open Sans"
+
+# Logo settings
+LOGO_WIDTH = Inches(1.5)
+LOGO_MARGIN = Inches(0.5)
+
 
 class MarkdownToPptxConverter:
     """Convert markdown content to PowerPoint presentations."""
 
-    def __init__(self) -> None:
-        """Initialize the converter."""
+    def __init__(self, logo_path: Optional[str] = None) -> None:
+        """Initialize the converter.
+
+        Args:
+            logo_path: Optional path to logo image file. If not provided,
+                attempts to find logo in default locations.
+        """
         self._prs: Presentation | None = None
+        self._logo_path = self._find_logo_path(logo_path)
+
+    def _find_logo_path(self, logo_path: Optional[str] = None) -> Optional[str]:
+        """Find the logo file path.
+
+        Args:
+            logo_path: Optional explicit logo path.
+
+        Returns:
+            Path to logo file, or None if not found.
+        """
+        if logo_path and os.path.exists(logo_path):
+            return logo_path
+
+        # Try default locations relative to package
+        package_dir = Path(__file__).parent
+        default_locations = [
+            package_dir / "resources" / "multiverse_logo.png",
+            package_dir.parent.parent / "resources" / "multiverse_logo.png",
+            Path.cwd() / "resources" / "multiverse_logo.png",
+        ]
+
+        for path in default_locations:
+            if path.exists():
+                return str(path)
+
+        return None
 
     def convert(self, markdown_content: str, output_path: str) -> str:
         """Convert markdown content to a PPTX file.
@@ -80,6 +130,41 @@ class MarkdownToPptxConverter:
         if not output_path.lower().endswith(".pptx"):
             raise ValidationError("Output path must have .pptx extension")
 
+    def _add_logo_to_slide(self, slide) -> None:
+        """Add the Multiverse Computing logo to a slide.
+
+        Args:
+            slide: The PowerPoint slide to add the logo to.
+        """
+        if not self._logo_path:
+            return
+
+        # Position logo in bottom-right corner with proper margin
+        slide_width = self._prs.slide_width
+        slide_height = self._prs.slide_height
+
+        # Calculate logo position (bottom-right with margin)
+        logo_left = slide_width - LOGO_WIDTH - LOGO_MARGIN
+        logo_top = slide_height - Inches(0.6) - LOGO_MARGIN
+
+        slide.shapes.add_picture(
+            self._logo_path,
+            logo_left,
+            logo_top,
+            width=LOGO_WIDTH
+        )
+
+    def _set_slide_background(self, slide) -> None:
+        """Set the slide background to brand color.
+
+        Args:
+            slide: The PowerPoint slide to set background for.
+        """
+        background = slide.background
+        fill = background.fill
+        fill.solid()
+        fill.fore_color.rgb = BRAND_CATSKILL_WHITE
+
     def _create_title_slide(self, slide_data: Slide) -> None:
         """Create a title slide.
 
@@ -88,6 +173,9 @@ class MarkdownToPptxConverter:
         """
         blank_layout = self._prs.slide_layouts[6]  # Blank layout
         slide = self._prs.slides.add_slide(blank_layout)
+
+        # Apply brand background
+        self._set_slide_background(slide)
 
         # Title text box
         title_left = Inches(0.5)
@@ -105,9 +193,10 @@ class MarkdownToPptxConverter:
         title_para.alignment = PP_ALIGN.CENTER
         title_run = title_para.add_run()
         title_run.text = slide_data.title
-        title_run.font.size = Pt(44)
+        title_run.font.size = FONT_SIZE_H1
         title_run.font.bold = True
-        title_run.font.color.rgb = RGBColor(0, 0, 0)
+        title_run.font.name = FONT_HEADER
+        title_run.font.color.rgb = BRAND_WOODSMOKE
 
         # Subtitle text box (if present)
         if slide_data.subtitle:
@@ -124,8 +213,12 @@ class MarkdownToPptxConverter:
             subtitle_para.alignment = PP_ALIGN.CENTER
             subtitle_run = subtitle_para.add_run()
             subtitle_run.text = slide_data.subtitle
-            subtitle_run.font.size = Pt(24)
-            subtitle_run.font.color.rgb = RGBColor(80, 80, 80)
+            subtitle_run.font.size = FONT_SIZE_H2
+            subtitle_run.font.name = FONT_BODY
+            subtitle_run.font.color.rgb = BRAND_WOODSMOKE
+
+        # Add logo to slide
+        self._add_logo_to_slide(slide)
 
     def _create_content_slide(self, slide_data: Slide) -> None:
         """Create a content slide.
@@ -135,6 +228,9 @@ class MarkdownToPptxConverter:
         """
         blank_layout = self._prs.slide_layouts[6]  # Blank layout
         slide = self._prs.slides.add_slide(blank_layout)
+
+        # Apply brand background
+        self._set_slide_background(slide)
 
         # Title text box
         title_left = Inches(0.5)
@@ -152,9 +248,10 @@ class MarkdownToPptxConverter:
         title_para.alignment = PP_ALIGN.LEFT
         title_run = title_para.add_run()
         title_run.text = slide_data.title
-        title_run.font.size = Pt(32)
+        title_run.font.size = FONT_SIZE_H2
         title_run.font.bold = True
-        title_run.font.color.rgb = RGBColor(0, 0, 0)
+        title_run.font.name = FONT_HEADER
+        title_run.font.color.rgb = BRAND_WOODSMOKE
 
         # Content text box
         content_left = Inches(0.5)
@@ -169,6 +266,9 @@ class MarkdownToPptxConverter:
         content_frame.word_wrap = True
 
         self._render_content(content_frame, slide_data.content)
+
+        # Add logo to slide
+        self._add_logo_to_slide(slide)
 
     def _render_content(
         self, text_frame, content: List[Union[ListItem, TextRun]]
@@ -226,9 +326,11 @@ class MarkdownToPptxConverter:
                 for text_run in item.content:
                     run = para.add_run()
                     run.text = text_run.text
-                    run.font.size = Pt(18)
+                    run.font.size = FONT_SIZE_BODY
+                    run.font.name = FONT_BODY
                     run.font.bold = text_run.bold
                     run.font.italic = text_run.italic
+                    run.font.color.rgb = BRAND_WOODSMOKE
 
             elif isinstance(item, TextRun):
                 if first_item:
@@ -239,9 +341,11 @@ class MarkdownToPptxConverter:
 
                 run = para.add_run()
                 run.text = item.text
-                run.font.size = Pt(18)
+                run.font.size = FONT_SIZE_BODY
+                run.font.name = FONT_BODY
                 run.font.bold = item.bold
                 run.font.italic = item.italic
+                run.font.color.rgb = BRAND_WOODSMOKE
 
 
 def convert_file(input_path: str, output_path: str | None = None) -> str:
