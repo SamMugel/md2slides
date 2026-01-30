@@ -6,12 +6,17 @@ import os
 from pathlib import Path
 from typing import List, Union
 
+from lxml import etree
 from pptx import Presentation
+from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 
 from md2slides.parser import ListItem, MarkdownParser, Slide, TextRun, ValidationError
+
+# Bullet characters for different indentation levels
+BULLET_CHARS = ['•', '–', '◦', '▪']
 
 
 class MarkdownToPptxConverter:
@@ -187,16 +192,35 @@ class MarkdownToPptxConverter:
                 # Set indentation based on level
                 para.level = item.level
 
-                # Add bullet or number
-                if item.ordered and item.number is not None:
-                    # For ordered lists, we prepend the number
-                    # (python-pptx doesn't have great numbered list support)
-                    prefix_run = para.add_run()
-                    prefix_run.text = f"{item.number}. "
-                    prefix_run.font.size = Pt(18)
+                # Configure paragraph properties for proper list formatting
+                pPr = para._p.get_or_add_pPr()
+
+                # Remove any existing bullet settings
+                for child in list(pPr):
+                    tag_name = etree.QName(child.tag).localname if isinstance(child.tag, str) else ''
+                    if tag_name.startswith('bu'):
+                        pPr.remove(child)
+
+                # Set indentation for proper alignment
+                indent_per_level = Inches(0.5)
+                left_margin = int(indent_per_level.emu * (item.level + 1))
+                hanging_indent = int(Inches(0.25).emu)
+                pPr.set(qn('a:marL'), str(left_margin))
+                pPr.set(qn('a:indent'), str(-hanging_indent))
+
+                if item.ordered:
+                    # Numbered list using buAutoNum
+                    buAutoNum = etree.SubElement(pPr, qn('a:buAutoNum'))
+                    # Use different numbering styles for different levels
+                    if item.level == 0:
+                        buAutoNum.set('type', 'arabicPeriod')  # 1. 2. 3.
+                    else:
+                        buAutoNum.set('type', 'alphaLcPeriod')  # a. b. c.
                 else:
-                    # Bullet point - use bullet character
-                    para.bullet = True
+                    # Bullet point using buChar
+                    buChar = etree.SubElement(pPr, qn('a:buChar'))
+                    bullet_char = BULLET_CHARS[min(item.level, len(BULLET_CHARS) - 1)]
+                    buChar.set('char', bullet_char)
 
                 # Add content with formatting
                 for text_run in item.content:

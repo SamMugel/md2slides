@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from pptx import Presentation
+from pptx.oxml.ns import qn
 
 from md2slides.converter import MarkdownToPptxConverter, convert_file
 from md2slides.parser import ValidationError
@@ -297,3 +298,150 @@ class TestFormattingPreservation:
                                 has_italic = True
 
             assert has_italic is True
+
+
+class TestListFormatting:
+    """Test that list formatting renders properly in PPTX."""
+
+    def test_bullet_points_have_bullet_char(self):
+        """Bullet points should have proper bullet character in XML."""
+        content = """## Slide
+
+- First bullet
+- Second bullet
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find paragraphs with bullet characters
+            bullet_count = 0
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        if buChar is not None:
+                            bullet_count += 1
+
+            assert bullet_count == 2
+
+    def test_nested_bullets_have_different_chars(self):
+        """Nested bullet points should have different bullet characters."""
+        content = """## Slide
+
+- Parent item
+  - Child item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            bullet_chars = []
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        if buChar is not None:
+                            bullet_chars.append(buChar.get('char'))
+
+            assert len(bullet_chars) == 2
+            # Parent and child should have different bullet chars
+            assert bullet_chars[0] != bullet_chars[1]
+
+    def test_numbered_list_has_auto_numbering(self):
+        """Numbered lists should use buAutoNum element."""
+        content = """## Slide
+
+1. First step
+2. Second step
+3. Third step
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            auto_num_count = 0
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buAutoNum is not None:
+                            auto_num_count += 1
+                            # Should be arabicPeriod type (1. 2. 3.)
+                            assert buAutoNum.get('type') == 'arabicPeriod'
+
+            assert auto_num_count == 3
+
+    def test_nested_numbered_list_uses_alpha(self):
+        """Nested numbered lists should use alphabetic numbering."""
+        content = """## Slide
+
+1. Parent step
+   1. Child step
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            num_types = []
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buAutoNum is not None:
+                            num_types.append(buAutoNum.get('type'))
+
+            assert len(num_types) == 2
+            assert num_types[0] == 'arabicPeriod'  # Parent: 1. 2. 3.
+            assert num_types[1] == 'alphaLcPeriod'  # Child: a. b. c.
+
+    def test_mixed_list_formatting(self):
+        """Mixed lists should have correct bullet/number formatting."""
+        content = """## Slide
+
+- Bullet item
+  1. Numbered sub-item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            has_bullet = False
+            has_number = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buChar is not None:
+                            has_bullet = True
+                        if buAutoNum is not None:
+                            has_number = True
+
+            assert has_bullet is True
+            assert has_number is True
