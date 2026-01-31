@@ -997,3 +997,204 @@ Learn more at [our website](https://multiverse.com)
                                 found_bing = True
             assert found_google is True
             assert found_bing is True
+
+
+class TestImageSupport:
+    """Test image display support (issue #5)."""
+
+    @pytest.fixture
+    def test_image_path(self, tmp_path):
+        """Create a test image file."""
+        from PIL import Image as PILImage
+
+        img = PILImage.new('RGB', (400, 300), color='blue')
+        img_path = tmp_path / "test_image.png"
+        img.save(img_path)
+        return str(img_path)
+
+    def test_image_with_caption_renders(self, test_image_path):
+        """Image with caption should render in the slide."""
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+        content = f"""## Slide with Image
+
+- Some text content
+![Test Caption]({test_image_path})
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Check for picture shape (not counting logo)
+            picture_count = sum(
+                1 for shape in slide.shapes
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+            )
+            # Should have at least 1 picture (the content image)
+            # May also have logo if resources/multiverse_logo.png exists
+            assert picture_count >= 1
+
+            # Check for caption text
+            caption_found = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    all_text = "".join(r.text for p in shape.text_frame.paragraphs for r in p.runs)
+                    if "Test Caption" in all_text:
+                        caption_found = True
+            assert caption_found is True
+
+    def test_image_without_caption_renders(self, test_image_path):
+        """Image without caption should render without caption text."""
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+        content = f"""## Slide with Image
+
+- Some text content
+![]({test_image_path})
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Check for picture shape
+            picture_count = sum(
+                1 for shape in slide.shapes
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+            )
+            assert picture_count >= 1
+
+    def test_content_width_reduced_with_image(self, test_image_path):
+        """Content text box should be narrower when image is present."""
+        from pptx.util import Inches
+
+        content = f"""## Slide with Image
+
+- Some text content
+![Image]({test_image_path})
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find content text box (with list items)
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    all_text = "".join(r.text for p in shape.text_frame.paragraphs for r in p.runs)
+                    if "text content" in all_text:
+                        # Content width should be approximately half the slide
+                        # Allowing some tolerance for margins
+                        expected_width = Inches(5.666)
+                        actual_width = shape.width
+                        # Allow 0.5 inch tolerance
+                        assert abs(actual_width - expected_width) < Inches(0.5)
+
+    def test_slide_without_image_has_full_width_content(self):
+        """Slide without image should have full-width content area."""
+        from pptx.util import Inches
+
+        content = """## Slide without Image
+
+- Some text content here
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find content text box
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    all_text = "".join(r.text for p in shape.text_frame.paragraphs for r in p.runs)
+                    if "text content" in all_text:
+                        # Content width should be full (approximately 12.333 inches)
+                        expected_width = Inches(12.333)
+                        actual_width = shape.width
+                        assert abs(actual_width - expected_width) < Inches(0.5)
+
+    def test_nonexistent_image_gracefully_handled(self):
+        """Nonexistent image file should not crash converter."""
+        content = """## Slide with Missing Image
+
+- Some text content
+![Missing](nonexistent_image.png)
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            # Should not raise an error
+            result = converter.convert(content, output_path)
+            assert os.path.exists(result)
+
+            prs = Presentation(output_path)
+            assert len(prs.slides) == 1
+
+    def test_image_caption_is_italic(self, test_image_path):
+        """Image caption should be styled in italic."""
+        content = f"""## Slide with Image
+
+![My Caption]({test_image_path})
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find caption and check it's italic
+            found_italic_caption = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "My Caption" in run.text:
+                                assert run.font.italic is True
+                                found_italic_caption = True
+            assert found_italic_caption is True
+
+    def test_large_image_is_scaled_down(self, tmp_path):
+        """Large images should be scaled to fit the slide."""
+        from PIL import Image as PILImage
+        from pptx.enum.shapes import MSO_SHAPE_TYPE
+        from pptx.util import Inches
+
+        # Create a very large image
+        img = PILImage.new('RGB', (2000, 1500), color='green')
+        img_path = tmp_path / "large_image.png"
+        img.save(img_path)
+
+        content = f"""## Slide with Large Image
+
+- Text content
+![Large]({img_path})
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find the content image (not the logo)
+            for shape in slide.shapes:
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    # Image should fit within right half (max ~6.2 inches)
+                    max_width = Inches(6.5)
+                    assert shape.width <= max_width

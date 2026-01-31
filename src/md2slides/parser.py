@@ -24,6 +24,14 @@ class TextRun:
 
 
 @dataclass
+class Image:
+    """An image with optional caption."""
+
+    path: str
+    caption: Optional[str] = None
+
+
+@dataclass
 class ListItem:
     """A list item with optional nesting."""
 
@@ -41,6 +49,7 @@ class Slide:
     content: List[ListItem | TextRun] = field(default_factory=list)
     is_title_slide: bool = False
     subtitle: Optional[str] = None
+    image: Optional[Image] = None
 
 
 class MarkdownParser:
@@ -154,6 +163,14 @@ class MarkdownParser:
             slide: The slide to add content to.
         """
         stripped = line.rstrip()
+
+        # Check for image syntax: ![caption](image_path)
+        image_match = re.match(r"^!\[([^\]]*)\]\(([^)]+)\)$", stripped)
+        if image_match:
+            caption = image_match.group(1) or None
+            path = image_match.group(2)
+            slide.image = Image(path=path, caption=caption)
+            return
 
         # Check for bullet list
         bullet_match = re.match(r"^(\s*)[-*+]\s+(.+)$", stripped)

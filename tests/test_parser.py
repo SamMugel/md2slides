@@ -3,6 +3,7 @@
 import pytest
 
 from md2slides.parser import (
+    Image,
     ListItem,
     MarkdownParser,
     Slide,
@@ -455,3 +456,95 @@ Learn more at [our website](https://multiverse.com)
         has_link = any(r.url == "https://example.com" for r in runs)
         assert has_bold is True
         assert has_link is True
+
+
+class TestImageParsing:
+    """Test image parsing (issue #5)."""
+
+    def test_image_with_caption(self):
+        """Image with caption should be parsed correctly."""
+        content = """## Slide
+
+- Some text
+![Figure 1](image.png)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        assert slides[0].image is not None
+        assert slides[0].image.path == "image.png"
+        assert slides[0].image.caption == "Figure 1"
+
+    def test_image_without_caption(self):
+        """Image without caption should have None caption."""
+        content = """## Slide
+
+- Some text
+![](image.png)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        assert slides[0].image is not None
+        assert slides[0].image.path == "image.png"
+        assert slides[0].image.caption is None
+
+    def test_image_with_path(self):
+        """Image with path should preserve full path."""
+        content = """## Slide
+
+![Chart](resources/charts/figure1.png)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        assert slides[0].image is not None
+        assert slides[0].image.path == "resources/charts/figure1.png"
+        assert slides[0].image.caption == "Chart"
+
+    def test_slide_without_image(self):
+        """Slide without image should have None image."""
+        content = """## Slide
+
+- Just bullet points
+- No image here
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        assert slides[0].image is None
+
+    def test_image_with_text_content(self):
+        """Image and text content should both be parsed."""
+        content = """## Slide
+
+- First item
+- Second item
+![My Image](photo.jpg)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        # Check text content
+        assert len(slides[0].content) == 2
+        assert slides[0].content[0].content[0].text == "First item"
+
+        # Check image
+        assert slides[0].image is not None
+        assert slides[0].image.path == "photo.jpg"
+        assert slides[0].image.caption == "My Image"
+
+    def test_multiple_images_uses_last(self):
+        """If multiple images are present, the last one is used."""
+        content = """## Slide
+
+![First](first.png)
+![Second](second.png)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        # Last image wins
+        assert slides[0].image is not None
+        assert slides[0].image.path == "second.png"
+        assert slides[0].image.caption == "Second"

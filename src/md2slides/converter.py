@@ -13,7 +13,7 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR, MSO_AUTO_SIZE
 
-from md2slides.parser import ListItem, MarkdownParser, Slide, TextRun, ValidationError
+from md2slides.parser import Image, ListItem, MarkdownParser, Slide, TextRun, ValidationError
 
 # Bullet characters for different indentation levels
 BULLET_CHARS = ['•', '–', '◦', '▪']
@@ -167,6 +167,99 @@ class MarkdownToPptxConverter:
             width=LOGO_WIDTH
         )
 
+    def _add_image_to_slide(self, slide, image: Image) -> None:
+        """Add an image to the right half of a slide with optional caption.
+
+        Args:
+            slide: The PowerPoint slide to add the image to.
+            image: The Image object containing path and optional caption.
+        """
+        from PIL import Image as PILImage
+
+        # Right half dimensions
+        right_half_left = Inches(6.666)  # Start of right half
+        right_half_width = Inches(6.167)  # Width of right half (13.333 - 0.5 - 6.666)
+        content_top = Inches(1.4)
+        content_height = Inches(5.6)
+
+        # Check if image file exists
+        image_path = Path(image.path)
+        if not image_path.is_absolute():
+            # Try relative to current working directory
+            image_path = Path.cwd() / image.path
+        if not image_path.exists():
+            # Try relative to resources directory
+            resources_path = Path.cwd() / "resources" / image.path
+            if resources_path.exists():
+                image_path = resources_path
+            else:
+                # Image not found, skip adding it
+                return
+
+        # Get original image dimensions
+        with PILImage.open(image_path) as img:
+            orig_width, orig_height = img.size
+
+        # Calculate scaling to fit in right half
+        # Account for caption space if present
+        caption_height_emu = Inches(0.4).emu if image.caption else 0
+        available_height_emu = content_height.emu - caption_height_emu
+
+        # Calculate scale factor to fit image in available space
+        target_width_emu = right_half_width.emu
+        target_height_emu = available_height_emu
+
+        # Calculate aspect ratio
+        aspect_ratio = orig_width / orig_height
+
+        # Scale to fit width first
+        scaled_width_emu = target_width_emu
+        scaled_height_emu = int(target_width_emu / aspect_ratio)
+
+        # If height exceeds available space, scale by height instead
+        if scaled_height_emu > target_height_emu:
+            scaled_height_emu = target_height_emu
+            scaled_width_emu = int(target_height_emu * aspect_ratio)
+
+        # Center image horizontally within right half
+        image_left = right_half_left.emu + (target_width_emu - scaled_width_emu) // 2
+
+        # Position image (account for caption above)
+        if image.caption:
+            image_top = content_top.emu + caption_height_emu
+        else:
+            image_top = content_top.emu
+
+        # Center image vertically in remaining space
+        remaining_height_emu = available_height_emu - scaled_height_emu
+        if remaining_height_emu > 0:
+            image_top = image_top + remaining_height_emu // 2
+
+        # Add the image
+        slide.shapes.add_picture(
+            str(image_path),
+            image_left,
+            image_top,
+            width=scaled_width_emu
+        )
+
+        # Add caption if present
+        if image.caption:
+            caption_shape = slide.shapes.add_textbox(
+                right_half_left, content_top, right_half_width, Inches(0.4)
+            )
+            caption_frame = caption_shape.text_frame
+            caption_frame.word_wrap = True
+
+            caption_para = caption_frame.paragraphs[0]
+            caption_para.alignment = PP_ALIGN.CENTER
+            caption_run = caption_para.add_run()
+            caption_run.text = image.caption
+            caption_run.font.size = FONT_SIZE_BODY
+            caption_run.font.name = FONT_BODY
+            caption_run.font.italic = True
+            caption_run.font.color.rgb = BRAND_DARK_GREY
+
     def _set_slide_background(self, slide) -> None:
         """Set the slide background to brand color.
 
@@ -249,6 +342,9 @@ class MarkdownToPptxConverter:
         # Apply brand background
         self._set_slide_background(slide)
 
+        # Determine layout based on whether slide has an image
+        has_image = slide_data.image is not None
+
         # Title text box
         title_left = Inches(0.5)
         title_top = Inches(0.4)
@@ -270,10 +366,13 @@ class MarkdownToPptxConverter:
         title_run.font.name = FONT_HEADER
         title_run.font.color.rgb = BRAND_WOODSMOKE
 
-        # Content text box
+        # Content text box - half width if image present, full width otherwise
         content_left = Inches(0.5)
         content_top = Inches(1.4)
-        content_width = Inches(12.333)
+        if has_image:
+            content_width = Inches(5.666)  # Half of slide width minus margins
+        else:
+            content_width = Inches(12.333)
         content_height = Inches(5.6)
 
         content_shape = slide.shapes.add_textbox(
@@ -285,6 +384,10 @@ class MarkdownToPptxConverter:
         content_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
 
         self._render_content(content_frame, slide_data.content)
+
+        # Add image if present
+        if has_image:
+            self._add_image_to_slide(slide, slide_data.image)
 
         # Add logo to slide
         self._add_logo_to_slide(slide)
