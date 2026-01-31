@@ -781,3 +781,66 @@ Subtitle text
                                 assert run.font.size.pt == 18
                                 found_text = True
             assert found_text is True
+
+
+class TestTextScaling:
+    """Test auto-scaling text to fit slide (issue #7)."""
+
+    def test_content_frame_has_auto_size(self):
+        """Content frame should have TEXT_TO_FIT_SHAPE auto size mode."""
+        from pptx.enum.text import MSO_AUTO_SIZE
+
+        content = """## Slide
+
+- Item one
+- Item two
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find content shape (not the title)
+            found_auto_size = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    tf = shape.text_frame
+                    # Content frame has list items
+                    all_text = "".join(r.text for p in tf.paragraphs for r in p.runs)
+                    if "Item one" in all_text:
+                        assert tf.auto_size == MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+                        found_auto_size = True
+            assert found_auto_size is True
+
+    def test_long_content_fits_slide(self):
+        """Long content should be contained within slide boundaries."""
+        # Create content with many items that would normally overflow
+        items = "\n".join([f"- Item {i} with some longer text" for i in range(20)])
+        content = f"""## Slide with Many Items
+
+{items}
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            # Should not raise any errors
+            result = converter.convert(content, output_path)
+            assert os.path.exists(result)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Verify content shape exists
+            found_content = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    all_text = "".join(r.text for p in shape.text_frame.paragraphs for r in p.runs)
+                    if "Item 0" in all_text:
+                        found_content = True
+                        # Verify auto_size is set for shrinking
+                        from pptx.enum.text import MSO_AUTO_SIZE
+                        assert shape.text_frame.auto_size == MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
+            assert found_content is True

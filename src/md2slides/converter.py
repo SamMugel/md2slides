@@ -280,6 +280,8 @@ class MarkdownToPptxConverter:
         )
         content_frame = content_shape.text_frame
         content_frame.word_wrap = True
+        # Auto-shrink text to fit within slide boundaries (issue #7)
+        content_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
 
         self._render_content(content_frame, slide_data.content)
 
