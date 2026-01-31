@@ -11,7 +11,7 @@ from pptx import Presentation
 from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR, MSO_AUTO_SIZE
 
 from md2slides.parser import ListItem, MarkdownParser, Slide, TextRun, ValidationError
 
@@ -24,22 +24,25 @@ BRAND_CATSKILL_WHITE = RGBColor(0xF8, 0xFA, 0xFC)  # #F8FAFC - light background
 BRAND_WOODSMOKE = RGBColor(0x11, 0x14, 0x17)  # #111417 - dark text
 BRAND_DARK_GREY = RGBColor(0x40, 0x40, 0x40)  # #404040 - child list items
 
-# Typography sizes (issue #3 enhancements)
-FONT_SIZE_TITLE = Pt(28)  # Title size (issue #3: increase to 28pt)
+# Typography sizes (issue #4: text size to 18pt)
+FONT_SIZE_TITLE = Pt(28)  # Title size
 FONT_SIZE_H1 = Pt(28)  # H1 uses same as title
 FONT_SIZE_H2 = Pt(28)  # H2 uses same as title
-FONT_SIZE_BODY = Pt(16)  # Body text (issue #3: increase to 16pt)
+FONT_SIZE_BODY = Pt(18)  # Body text (issue #4: increase to 18pt)
 
 # Font families (from style.md)
 FONT_HEADER = "Montserrat"
 FONT_BODY = "Open Sans"
 
-# Logo settings (issue #3: increase by 3x)
-LOGO_WIDTH = Inches(4.5)  # 1.5 * 3 = 4.5 inches
+# Logo settings (issue #4: make 30% smaller than previous 4.5")
+LOGO_WIDTH = Inches(3.15)  # 4.5 * 0.7 = 3.15 inches (30% smaller)
 LOGO_MARGIN = Inches(0.5)
 
 # List formatting (issue #3: add 4 spaces after bullet/number)
 LIST_ITEM_SPACING = "    "  # 4 spaces after bullet/number
+
+# Line spacing (issue #4: add half space between lines)
+LINE_SPACING_FACTOR = 1.5  # 1.0 = single, 1.5 = one and a half
 
 
 class MarkdownToPptxConverter:
@@ -149,10 +152,11 @@ class MarkdownToPptxConverter:
         slide_height = self._prs.slide_height
 
         # Calculate logo position (bottom-right with margin)
-        # Logo is now 3x larger (4.5 inches), adjust position accordingly
+        # Logo is 3.15 inches (issue #4: 30% smaller than 4.5")
         logo_left = slide_width - LOGO_WIDTH - LOGO_MARGIN
-        # Estimate logo height based on aspect ratio (original was ~0.26" at 1.5" width)
-        estimated_logo_height = Inches(0.78)  # 0.26 * 3 = 0.78 inches
+        # Estimate logo height based on aspect ratio (scales with width)
+        # At 3.15" width, height is approximately 0.55" (0.78 * 0.7)
+        estimated_logo_height = Inches(0.55)
         logo_top = slide_height - estimated_logo_height - LOGO_MARGIN
 
         slide.shapes.add_picture(
@@ -185,17 +189,19 @@ class MarkdownToPptxConverter:
         # Apply brand background
         self._set_slide_background(slide)
 
-        # Title text box
+        # Title text box - fit to text size (issue #4)
         title_left = Inches(0.5)
-        title_top = Inches(2.5)
+        title_top = Inches(2.8)  # Adjusted for better centering
         title_width = Inches(12.333)
-        title_height = Inches(1.5)
+        # Height fits the text - single line title at 28pt needs ~0.5"
+        title_height = Inches(0.6)
 
         title_shape = slide.shapes.add_textbox(
             title_left, title_top, title_width, title_height
         )
         title_frame = title_shape.text_frame
         title_frame.word_wrap = True
+        title_frame.auto_size = MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
 
         title_para = title_frame.paragraphs[0]
         title_para.alignment = PP_ALIGN.CENTER
@@ -206,16 +212,18 @@ class MarkdownToPptxConverter:
         title_run.font.name = FONT_HEADER
         title_run.font.color.rgb = BRAND_WOODSMOKE
 
-        # Subtitle text box (if present)
+        # Subtitle text box (if present) - closer to title, dark grey (issue #4)
         if slide_data.subtitle:
-            subtitle_top = Inches(4.2)
-            subtitle_height = Inches(1.0)
+            # Position subtitle closer to title (0.3" gap instead of 1.7")
+            subtitle_top = Inches(3.5)  # Closer to title
+            subtitle_height = Inches(0.5)
 
             subtitle_shape = slide.shapes.add_textbox(
                 title_left, subtitle_top, title_width, subtitle_height
             )
             subtitle_frame = subtitle_shape.text_frame
             subtitle_frame.word_wrap = True
+            subtitle_frame.auto_size = MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
 
             subtitle_para = subtitle_frame.paragraphs[0]
             subtitle_para.alignment = PP_ALIGN.CENTER
@@ -223,7 +231,7 @@ class MarkdownToPptxConverter:
             subtitle_run.text = slide_data.subtitle
             subtitle_run.font.size = FONT_SIZE_H2
             subtitle_run.font.name = FONT_BODY
-            subtitle_run.font.color.rgb = BRAND_WOODSMOKE
+            subtitle_run.font.color.rgb = BRAND_DARK_GREY  # Dark grey (issue #4)
 
         # Add logo to slide
         self._add_logo_to_slide(slide)
@@ -330,6 +338,10 @@ class MarkdownToPptxConverter:
                     bullet_char = BULLET_CHARS[min(item.level, len(BULLET_CHARS) - 1)]
                     buChar.set('char', bullet_char)
 
+                # Add line spacing - half space between lines (issue #4)
+                # Use space_after to add spacing after each paragraph
+                para.space_after = Pt(9)  # Half of 18pt = 9pt extra space
+
                 # Determine text color based on nesting level (issue #3)
                 text_color = BRAND_DARK_GREY if item.level > 0 else BRAND_WOODSMOKE
 
@@ -356,6 +368,9 @@ class MarkdownToPptxConverter:
                     first_item = False
                 else:
                     para = text_frame.add_paragraph()
+
+                # Add line spacing - half space between lines (issue #4)
+                para.space_after = Pt(9)  # Half of 18pt = 9pt extra space
 
                 run = para.add_run()
                 run.text = item.text

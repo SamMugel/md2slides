@@ -559,7 +559,7 @@ Content here
                                 assert run.font.size.pt == 28
 
     def test_body_uses_correct_size(self):
-        """Body text should use 16pt font size (issue #3)."""
+        """Body text should use 18pt font size (issue #4)."""
         content = """## Slide
 
 - Body text here
@@ -577,7 +577,7 @@ Content here
                     for para in shape.text_frame.paragraphs:
                         for run in para.runs:
                             if "Body text here" in run.text:
-                                assert run.font.size.pt == 16
+                                assert run.font.size.pt == 18
 
 
 class TestStyleEnhancements:
@@ -705,3 +705,79 @@ Content here
                     for shape in slide.shapes
                 )
                 assert has_picture is True
+
+
+class TestCosmeticChanges:
+    """Test cosmetic changes from issue #4."""
+
+    def test_subtitle_uses_dark_grey(self):
+        """Subtitle should use dark grey color (#404040)."""
+        content = """# Title
+
+Subtitle text
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_subtitle = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Subtitle text" in run.text:
+                                assert run.font.color.rgb == (0x40, 0x40, 0x40)
+                                found_subtitle = True
+            assert found_subtitle is True
+
+    def test_text_has_line_spacing(self):
+        """Text should have half-space line spacing (space_after = 9pt)."""
+        content = """## Slide
+
+- Item one
+- Item two
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_spacing = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        # Check if space_after is set
+                        if para.space_after is not None and para.space_after.pt == 9:
+                            found_spacing = True
+            assert found_spacing is True
+
+    def test_text_size_is_18pt(self):
+        """Body text should be 18pt (issue #4)."""
+        content = """## Slide
+
+- Body text here
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_text = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Body text here" in run.text:
+                                assert run.font.size.pt == 18
+                                found_text = True
+            assert found_text is True
