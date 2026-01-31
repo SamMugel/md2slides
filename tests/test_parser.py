@@ -362,3 +362,96 @@ Q3 2024 Financial Summary
         assert isinstance(second_item, ListItem)
         has_bold = any(run.bold for run in second_item.content)
         assert has_bold is True
+
+
+class TestUrlParsing:
+    """Test URL/hyperlink parsing (issue #6)."""
+
+    def test_url_with_caption(self):
+        """URL with caption should be parsed correctly."""
+        content = """## Slide
+
+- Visit [Google](https://google.com)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        item = slides[0].content[0]
+        assert isinstance(item, ListItem)
+        runs = item.content
+        # Should have: "Visit ", "Google"
+        assert runs[0].text == "Visit "
+        assert runs[0].url is None
+        assert runs[1].text == "Google"
+        assert runs[1].url == "https://google.com"
+
+    def test_url_without_caption(self):
+        """URL without caption should use URL as display text."""
+        content = """## Slide
+
+- Check [](https://example.com)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        item = slides[0].content[0]
+        runs = item.content
+        # Should have: "Check ", "https://example.com"
+        assert runs[1].text == "https://example.com"
+        assert runs[1].url == "https://example.com"
+
+    def test_multiple_urls_in_line(self):
+        """Multiple URLs in one line should all be parsed."""
+        content = """## Slide
+
+- Visit [Google](https://google.com) or [Bing](https://bing.com)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        item = slides[0].content[0]
+        runs = item.content
+        # Should have: "Visit ", "Google", " or ", "Bing"
+        assert runs[1].text == "Google"
+        assert runs[1].url == "https://google.com"
+        assert runs[3].text == "Bing"
+        assert runs[3].url == "https://bing.com"
+
+    def test_url_in_plain_text(self):
+        """URLs should work in plain text paragraphs."""
+        content = """## Slide
+
+Learn more at [our website](https://multiverse.com)
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        # Content should be TextRuns
+        runs = slides[0].content
+        # Find the URL run
+        url_run = None
+        for run in runs:
+            if isinstance(run, TextRun) and run.url:
+                url_run = run
+                break
+
+        assert url_run is not None
+        assert url_run.text == "our website"
+        assert url_run.url == "https://multiverse.com"
+
+    def test_url_with_formatting(self):
+        """URLs mixed with formatting should work correctly."""
+        content = """## Slide
+
+- **Bold** and [Link](https://example.com) text
+"""
+        parser = MarkdownParser(content)
+        slides = parser.parse()
+
+        item = slides[0].content[0]
+        runs = item.content
+        # Should have: "Bold", " and ", "Link", " text"
+        has_bold = any(r.bold for r in runs)
+        has_link = any(r.url == "https://example.com" for r in runs)
+        assert has_bold is True
+        assert has_link is True

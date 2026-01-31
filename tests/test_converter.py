@@ -844,3 +844,156 @@ class TestTextScaling:
                         from pptx.enum.text import MSO_AUTO_SIZE
                         assert shape.text_frame.auto_size == MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
             assert found_content is True
+
+
+class TestHyperlinkSupport:
+    """Test hyperlink/URL support (issue #6)."""
+
+    def test_url_with_caption_creates_hyperlink(self):
+        """URL with caption should create clickable hyperlink."""
+        content = """## Slide
+
+- Visit [Google](https://google.com) for search
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_hyperlink = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Google" in run.text:
+                                assert run.hyperlink.address == "https://google.com"
+                                found_hyperlink = True
+            assert found_hyperlink is True
+
+    def test_url_without_caption_uses_url_as_text(self):
+        """URL without caption should display URL as text."""
+        content = """## Slide
+
+- Check [](https://example.com)
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_url_text = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "https://example.com" in run.text:
+                                assert run.hyperlink.address == "https://example.com"
+                                found_url_text = True
+            assert found_url_text is True
+
+    def test_hyperlink_uses_blue_color(self):
+        """Hyperlinks should use blue color (#0066CC)."""
+        content = """## Slide
+
+- Visit [Example](https://example.com)
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_link = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Example" in run.text:
+                                assert run.font.color.rgb == (0x00, 0x66, 0xCC)
+                                found_link = True
+            assert found_link is True
+
+    def test_hyperlink_is_underlined(self):
+        """Hyperlinks should be underlined."""
+        content = """## Slide
+
+- Visit [Example](https://example.com)
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_link = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Example" in run.text:
+                                assert run.font.underline is True
+                                found_link = True
+            assert found_link is True
+
+    def test_url_in_plain_text(self):
+        """URLs should work in plain text paragraphs."""
+        content = """## Slide
+
+Learn more at [our website](https://multiverse.com)
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_link = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "our website" in run.text:
+                                assert run.hyperlink.address == "https://multiverse.com"
+                                found_link = True
+            assert found_link is True
+
+    def test_multiple_urls_in_one_line(self):
+        """Multiple URLs in the same line should all be hyperlinks."""
+        content = """## Slide
+
+- Visit [Google](https://google.com) or [Bing](https://bing.com)
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_google = False
+            found_bing = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Google" in run.text:
+                                assert run.hyperlink.address == "https://google.com"
+                                found_google = True
+                            if "Bing" in run.text:
+                                assert run.hyperlink.address == "https://bing.com"
+                                found_bing = True
+            assert found_google is True
+            assert found_bing is True

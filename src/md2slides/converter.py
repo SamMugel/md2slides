@@ -23,6 +23,7 @@ BRAND_RED = RGBColor(0xFF, 0x00, 0x00)  # #FF0000 - accent color
 BRAND_CATSKILL_WHITE = RGBColor(0xF8, 0xFA, 0xFC)  # #F8FAFC - light background
 BRAND_WOODSMOKE = RGBColor(0x11, 0x14, 0x17)  # #111417 - dark text
 BRAND_DARK_GREY = RGBColor(0x40, 0x40, 0x40)  # #404040 - child list items
+LINK_COLOR = RGBColor(0x00, 0x66, 0xCC)  # #0066CC - hyperlink blue
 
 # Typography sizes (issue #4: text size to 18pt)
 FONT_SIZE_TITLE = Pt(28)  # Title size
@@ -362,7 +363,13 @@ class MarkdownToPptxConverter:
                     run.font.name = FONT_BODY
                     run.font.bold = text_run.bold
                     run.font.italic = text_run.italic
-                    run.font.color.rgb = text_color
+                    # Apply hyperlink styling if URL present
+                    if text_run.url:
+                        run.hyperlink.address = text_run.url
+                        run.font.color.rgb = LINK_COLOR
+                        run.font.underline = True
+                    else:
+                        run.font.color.rgb = text_color
 
             elif isinstance(item, TextRun):
                 if first_item:
@@ -380,7 +387,13 @@ class MarkdownToPptxConverter:
                 run.font.name = FONT_BODY
                 run.font.bold = item.bold
                 run.font.italic = item.italic
-                run.font.color.rgb = BRAND_WOODSMOKE
+                # Apply hyperlink styling if URL present
+                if item.url:
+                    run.hyperlink.address = item.url
+                    run.font.color.rgb = LINK_COLOR
+                    run.font.underline = True
+                else:
+                    run.font.color.rgb = BRAND_WOODSMOKE
 
 
 def convert_file(input_path: str, output_path: str | None = None) -> str:

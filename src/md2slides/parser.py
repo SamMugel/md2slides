@@ -20,6 +20,7 @@ class TextRun:
     text: str
     bold: bool = False
     italic: bool = False
+    url: Optional[str] = None
 
 
 @dataclass
@@ -184,7 +185,7 @@ class MarkdownParser:
                 slide.content.append(run)
 
     def _parse_inline_formatting(self, text: str) -> List[TextRun]:
-        """Parse inline formatting (bold, italic) in text.
+        """Parse inline formatting (bold, italic, URLs) in text.
 
         Args:
             text: The text to parse.
@@ -194,25 +195,38 @@ class MarkdownParser:
         """
         runs: List[TextRun] = []
 
-        # Pattern to match bold+italic, bold, or italic
+        # First, handle markdown links [caption](url)
+        # Then handle bold+italic, bold, or italic
         # Order matters: check longer patterns first
-        pattern = r"(\*\*\*|___)(.+?)(\*\*\*|___)|(\*\*|__)(.+?)(\*\*|__)|(\*|_)(.+?)(\*|_)"
+        # Link pattern: [caption](url) - caption can be empty
+        link_pattern = r"\[([^\]]*)\]\(([^)]+)\)"
+        format_pattern = r"(\*\*\*|___)(.+?)(\*\*\*|___)|(\*\*|__)(.+?)(\*\*|__)|(\*|_)(.+?)(\*|_)"
+
+        # Combined pattern: links first, then formatting
+        combined_pattern = f"({link_pattern})|{format_pattern}"
 
         pos = 0
-        for match in re.finditer(pattern, text):
+        for match in re.finditer(combined_pattern, text):
             # Add any text before this match as plain text
             if match.start() > pos:
                 plain_text = text[pos : match.start()]
                 if plain_text:
                     runs.append(TextRun(text=plain_text))
 
-            # Determine formatting type
-            if match.group(1):  # Bold + Italic (*** or ___)
-                runs.append(TextRun(text=match.group(2), bold=True, italic=True))
-            elif match.group(4):  # Bold (** or __)
-                runs.append(TextRun(text=match.group(5), bold=True, italic=False))
-            elif match.group(7):  # Italic (* or _)
-                runs.append(TextRun(text=match.group(8), bold=False, italic=True))
+            # Check if this is a link match
+            if match.group(1):  # Link match [caption](url)
+                caption = match.group(2)
+                url = match.group(3)
+                # Use URL as display text if caption is empty
+                display_text = caption if caption else url
+                runs.append(TextRun(text=display_text, url=url))
+            # Determine formatting type (groups shifted by 3 due to link pattern)
+            elif match.group(4):  # Bold + Italic (*** or ___)
+                runs.append(TextRun(text=match.group(5), bold=True, italic=True))
+            elif match.group(7):  # Bold (** or __)
+                runs.append(TextRun(text=match.group(8), bold=True, italic=False))
+            elif match.group(10):  # Italic (* or _)
+                runs.append(TextRun(text=match.group(11), bold=False, italic=True))
 
             pos = match.end()
 
