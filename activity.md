@@ -388,3 +388,41 @@ python -c "from pptx import Presentation; ..."  # Verified layout structure
 - Logo appears on all slides in bottom-right corner
 - Slides with 1 image + text still use 2-column layout correctly
 - Text-only slides still use standard layout correctly
+
+### 2026-02-07 - Task 17: Render Markdown Hyperlinks as Clickable Links in PPTX
+
+**Task completed:**
+17. Render markdown hyperlinks as clickable links in PPTX
+
+**Changes made:**
+- Updated `md2slides/parser.py`:
+  - Added `InlineSpan` dataclass to represent inline text with optional hyperlink (href), bold, italic, code attributes
+  - Added `spans` field to `TextElement` dataclass for rich inline content
+  - Added `spans` field to `ListItem` dataclass for hyperlinks in list items
+  - Added `_extract_inline_spans()` method to parse inline tokens into spans, preserving hyperlinks
+  - Updated paragraph parsing to extract spans alongside plain text
+  - Updated list item parsing to extract spans for hyperlink support in lists
+- Updated `md2slides/converter.py`:
+  - Added imports for `InlineSpan` and `ListItem`
+  - Added `_add_spans_to_paragraph()` method that renders spans with hyperlinks using `run.hyperlink.address`
+  - Hyperlinks are styled with blue color (0x0563C1) and underline
+  - Updated `_add_text_element()` to use spans when available
+  - Added `_add_list_item_content()` method to render list items with hyperlink support
+  - Updated `_add_bullet_list()` to use the new method for all list item levels
+- Created `examples/hyperlinks-test.md` for testing various hyperlink scenarios
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/*.py  # Syntax check passed
+python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Creates PPTX
+python -c "from pptx import Presentation; ..."  # Verified hyperlinks in PPTX
+python -m md2slides examples/simple.md -o test-output.pptx  # Existing examples still work
+```
+
+**Verification:**
+- Hyperlinks in paragraphs: "Google" -> https://google.com, "GitHub" -> https://github.com
+- Hyperlinks in lists: "Anthropic" -> https://anthropic.com, "Stack Overflow" -> https://stackoverflow.com
+- Multiple hyperlinks per paragraph work correctly
+- Links are styled with blue color and underline
+- Edge cases handled: multiple links in paragraph, links in list items, trailing punctuation
+- Existing examples convert without errors

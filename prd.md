@@ -311,7 +311,7 @@ md2slides --help
     "Handle edge cases: multiple links in a paragraph, links inside list items, and trailing punctuation.",
     "Verify: example markdown with multiple hyperlinks results in clickable links in PowerPoint."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "feature",

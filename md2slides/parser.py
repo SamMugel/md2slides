@@ -8,12 +8,23 @@ from mistune.plugins.table import table as table_plugin
 
 
 @dataclass
+class InlineSpan:
+    """An inline text span, possibly with a hyperlink."""
+    text: str
+    href: Optional[str] = None  # URL if this is a hyperlink
+    bold: bool = False
+    italic: bool = False
+    code: bool = False
+
+
+@dataclass
 class TextElement:
     """A text element (paragraph or inline text)."""
     text: str
     bold: bool = False
     italic: bool = False
     code: bool = False
+    spans: List["InlineSpan"] = field(default_factory=list)  # Rich inline content
 
 
 @dataclass
@@ -21,6 +32,7 @@ class ListItem:
     """A single list item, which may contain nested lists."""
     text: str
     children: List["ListItem"] = field(default_factory=list)
+    spans: List["InlineSpan"] = field(default_factory=list)  # Rich inline content
 
 
 @dataclass
@@ -126,10 +138,12 @@ class MarkdownParser:
                     for img in images:
                         current_slide.elements.append(img)
 
-                    # Also add any text that's not part of an image
+                    # Extract inline spans with hyperlink support
+                    spans = self._extract_inline_spans(token.get("children", []))
+                    # Also get plain text for backwards compatibility
                     text = self._extract_text_excluding_images(token.get("children", []))
                     if text:
-                        current_slide.elements.append(TextElement(text=text))
+                        current_slide.elements.append(TextElement(text=text, spans=spans))
 
             elif token_type == "list":
                 if current_slide is not None:
@@ -258,6 +272,74 @@ class MarkdownParser:
 
         return "".join(parts).strip()
 
+    def _extract_inline_spans(self, children: list) -> List[InlineSpan]:
+        """Extract inline spans from tokens, preserving hyperlinks.
+
+        Returns a list of InlineSpan objects that can represent both plain text
+        and clickable hyperlinks.
+        """
+        spans = []
+        i = 0
+        while i < len(children):
+            child = children[i]
+            child_type = child.get("type")
+
+            # Skip image tokens
+            if child_type == "image":
+                i += 1
+                continue
+
+            # Skip image patterns (text ending with "!" followed by link)
+            if (
+                child_type == "text"
+                and child.get("raw", "").endswith("!")
+                and i + 1 < len(children)
+                and children[i + 1].get("type") == "link"
+            ):
+                # Add any text before the "!" as a plain span
+                raw = child.get("raw", "")
+                if len(raw) > 1:
+                    spans.append(InlineSpan(text=raw[:-1]))
+                i += 2  # Skip both
+                continue
+
+            if child_type == "text":
+                text = child.get("raw", "")
+                if text:
+                    spans.append(InlineSpan(text=text))
+
+            elif child_type == "codespan":
+                text = child.get("raw", "")
+                if text:
+                    spans.append(InlineSpan(text=text, code=True))
+
+            elif child_type == "emphasis":
+                text = self._extract_text(child.get("children", []))
+                if text:
+                    spans.append(InlineSpan(text=text, italic=True))
+
+            elif child_type == "strong":
+                text = self._extract_text(child.get("children", []))
+                if text:
+                    spans.append(InlineSpan(text=text, bold=True))
+
+            elif child_type == "link":
+                # Extract link text and URL
+                link_text = self._extract_text(child.get("children", []))
+                href = child.get("attrs", {}).get("url", "")
+                if link_text:
+                    spans.append(InlineSpan(text=link_text, href=href))
+
+            elif child_type == "softbreak":
+                spans.append(InlineSpan(text=" "))
+
+            elif child_type == "linebreak":
+                spans.append(InlineSpan(text="\n"))
+
+            i += 1
+
+        return spans
+
     def _parse_list(self, token: dict) -> BulletList:
         """Parse a list token into a BulletList."""
         ordered = token.get("attrs", {}).get("ordered", False)
@@ -273,18 +355,20 @@ class MarkdownParser:
     def _parse_list_item(self, token: dict) -> ListItem:
         """Parse a list_item token into a ListItem."""
         text_parts = []
+        all_spans = []
         children = []
 
         for child in token.get("children", []):
             child_type = child.get("type")
             if child_type in ("block_text", "paragraph"):
                 text_parts.append(self._extract_text(child.get("children", [])))
+                all_spans.extend(self._extract_inline_spans(child.get("children", [])))
             elif child_type == "list":
                 # Nested list
                 nested_list = self._parse_list(child)
                 children.extend(nested_list.items)
 
-        return ListItem(text=" ".join(text_parts), children=children)
+        return ListItem(text=" ".join(text_parts), children=children, spans=all_spans)
 
     def _parse_table(self, token: dict) -> Table:
         """Parse a table token into a Table."""

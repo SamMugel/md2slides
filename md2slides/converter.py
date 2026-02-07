@@ -10,6 +10,8 @@ from md2slides.parser import (
     BulletList,
     CodeBlock,
     Image,
+    InlineSpan,
+    ListItem,
     Presentation,
     Section,
     Slide,
@@ -390,8 +392,41 @@ class PresentationConverter:
         else:
             p = text_frame.add_paragraph()
 
-        p.text = element.text
         p.level = 0
+
+        # If we have spans with rich content (hyperlinks), render those
+        if element.spans:
+            self._add_spans_to_paragraph(p, element.spans)
+        else:
+            # Fallback to plain text
+            p.text = element.text
+
+    def _add_spans_to_paragraph(self, paragraph, spans: list) -> None:
+        """Add inline spans to a paragraph, supporting hyperlinks."""
+        from pptx.dml.color import RGBColor
+
+        # Clear any existing text
+        paragraph.clear()
+
+        for span in spans:
+            run = paragraph.add_run()
+            run.text = span.text
+
+            # Apply hyperlink if present
+            if span.href:
+                run.hyperlink.address = span.href
+                # Optionally apply link styling (blue, underline)
+                run.font.color.rgb = RGBColor(0x05, 0x63, 0xC1)  # A standard link blue
+                run.font.underline = True
+
+            # Apply other formatting
+            if span.bold:
+                run.font.bold = True
+            if span.italic:
+                run.font.italic = True
+            if span.code:
+                run.font.name = self._theme.fonts.code_font
+                run.font.size = Pt(self._theme.fonts.code_size)
 
     def _add_bullet_list(
         self, text_frame, bullet_list: BulletList, is_first: bool
@@ -403,20 +438,27 @@ class PresentationConverter:
             else:
                 p = text_frame.add_paragraph()
 
-            p.text = item.text
             p.level = 0
+            self._add_list_item_content(p, item)
 
             # Add nested items
             for child in item.children:
                 p = text_frame.add_paragraph()
-                p.text = child.text
                 p.level = 1
+                self._add_list_item_content(p, child)
 
                 # Handle deeper nesting (grandchildren)
                 for grandchild in child.children:
                     p = text_frame.add_paragraph()
-                    p.text = grandchild.text
                     p.level = 2
+                    self._add_list_item_content(p, grandchild)
+
+    def _add_list_item_content(self, paragraph, item: ListItem) -> None:
+        """Add a list item's content to a paragraph, supporting hyperlinks."""
+        if item.spans:
+            self._add_spans_to_paragraph(paragraph, item.spans)
+        else:
+            paragraph.text = item.text
 
     def _add_code_block(
         self, text_frame, code_block: CodeBlock, is_first: bool
