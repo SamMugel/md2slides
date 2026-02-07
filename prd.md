@@ -163,7 +163,7 @@ md2slides --help
       "Add error handling for missing files",
       "Verify: md2slides test.md -o test.pptx creates valid file"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

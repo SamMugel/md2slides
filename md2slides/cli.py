@@ -2,8 +2,10 @@
 
 import argparse
 import sys
+from pathlib import Path
 
 from md2slides import __version__
+from md2slides.converter import PresentationConverter
 
 THEMES = ["default", "dark", "light", "corporate"]
 
@@ -54,15 +56,31 @@ def main():
         print("Run 'md2slides --help' for usage information.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Converting {args.input_file} to PowerPoint...")
-    print(f"Theme: {args.theme}")
-    if args.output:
-        print(f"Output: {args.output}")
-    else:
-        print("Output: (default based on input file)")
+    # Validate input file exists
+    input_path = Path(args.input_file)
+    if not input_path.exists():
+        print(f"Error: File not found: {args.input_file}", file=sys.stderr)
+        sys.exit(1)
 
-    # TODO: Implement actual conversion
-    print("Conversion not yet implemented.")
+    if not input_path.is_file():
+        print(f"Error: Not a file: {args.input_file}", file=sys.stderr)
+        sys.exit(1)
+
+    # Determine output path
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = input_path.with_suffix(".pptx")
+
+    print(f"Converting {input_path} to PowerPoint...")
+
+    try:
+        converter = PresentationConverter(theme=args.theme)
+        converter.convert_file(str(input_path), str(output_path))
+        print(f"Created: {output_path}")
+    except Exception as e:
+        print(f"Error: Conversion failed: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

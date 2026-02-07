@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 4
-**Current Task:** Wire up CLI to parser and converter
+**Tasks Completed:** 5
+**Current Task:** Implement default theme
 
 ---
 
@@ -93,3 +93,26 @@ python -c "from md2slides.converter import convert_markdown_to_pptx; ..."  # Tes
 - Generated test-output.pptx with 3 slides (title + 2 content)
 - Generated example-output.pptx from resources/example.md with 5 slides
 - All PPTX files open correctly
+
+### 2026-02-07 - Task 5: Wire Up CLI to Parser and Converter
+
+**Task completed:**
+5. Wire up CLI to parser and converter
+
+**Changes made:**
+- Updated `md2slides/cli.py` to integrate with converter
+- Added file validation (exists, is_file)
+- Added automatic output path generation (input.md -> input.pptx)
+- Added error handling with proper exit codes
+
+**Commands run:**
+```bash
+python -m md2slides --help                            # Shows updated usage
+python -m md2slides resources/example.md -o cli-test.pptx  # Creates PPTX
+python -m md2slides nonexistent.md                    # Returns error (exit 1)
+```
+
+**Verification:**
+- CLI converts markdown files to PPTX successfully
+- Missing file error is handled gracefully
+- Output file is created with correct content
