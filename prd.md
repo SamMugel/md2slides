@@ -299,7 +299,7 @@ md2slides --help
     "Define deterministic ordering (markdown order).",
     "Verify: example markdown with two images produces a slide with one image above the other, properly scaled and not overlapping."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "feature",

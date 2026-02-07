@@ -354,3 +354,37 @@ python -c "from pptx import Presentation; ..."  # Verified layout structure
 - Slides with no images or 2+ images use standard "Title and Content" layout
 - Logo appears on all slides in correct position
 - Image aspect ratio preserved during scaling
+
+### 2026-02-07 - Task 16: Two-Image Vertical Stacking Layout
+
+**Task completed:**
+16. If two images are present on a slide, stack them vertically (top and bottom) with consistent spacing
+
+**Changes made:**
+- Updated `md2slides/converter.py`:
+  - Extended `_add_content_slide()` to detect slides with exactly 2 images (no text elements)
+  - Added `_add_two_image_stacked_slide()` method that:
+    - Uses LAYOUT_BLANK for custom positioning
+    - Computes image region (full width, excludes title + logo safe area)
+    - Splits region into two vertical slots with 0.2" gutter
+    - Scales each image to fit its slot preserving aspect ratio
+    - Centers images horizontally within full-width region
+  - Deterministic ordering: images appear in markdown order (top to bottom)
+- Created `examples/two-images-test.md` for testing the feature
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/converter.py  # Syntax check passed
+python -m md2slides examples/two-images-test.md -o two-images-output.pptx  # Creates PPTX
+python -c "from pptx import Presentation; ..."  # Verified layout structure
+```
+
+**Verification:**
+- Slide with 2 images uses "Blank" layout with stacked positioning
+- First image: 3.12"w x 1.75"h at (3.44", 1.89") - top position
+- Second image: 3.12"w x 1.75"h at (3.44", 4.61") - bottom position
+- Images are horizontally centered with consistent sizing
+- Gutter spacing of 0.2" between images
+- Logo appears on all slides in bottom-right corner
+- Slides with 1 image + text still use 2-column layout correctly
+- Text-only slides still use standard layout correctly

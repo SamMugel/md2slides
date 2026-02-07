@@ -106,6 +106,11 @@ class PresentationConverter:
             self._add_two_column_slide(slide, text_elements, images[0])
             return
 
+        if len(images) == 2 and len(text_elements) == 0 and len(tables) == 0:
+            # Use vertically stacked layout for two images
+            self._add_two_image_stacked_slide(slide, images)
+            return
+
         # Default layout for other slides
         slide_layout = self._prs.slide_layouts[self.LAYOUT_CONTENT]
         pptx_slide = self._prs.slides.add_slide(slide_layout)
@@ -238,6 +243,89 @@ class PresentationConverter:
                 top=content_top,
                 max_width=right_width,
                 max_height=content_height
+            )
+
+        # Apply theme styling
+        self._theme.apply_to_content_slide(pptx_slide)
+
+    def _add_two_image_stacked_slide(
+        self,
+        slide: Slide,
+        images: list
+    ) -> None:
+        """Add a slide with two images stacked vertically (top and bottom)."""
+        # Use blank layout for custom positioning
+        slide_layout = self._prs.slide_layouts[self.LAYOUT_BLANK]
+        pptx_slide = self._prs.slides.add_slide(slide_layout)
+
+        # Slide dimensions (standard 10" x 7.5")
+        slide_width = Inches(10)
+        slide_height = Inches(7.5)
+
+        # Content area margins
+        margin_left = Inches(0.5)
+        margin_right = Inches(0.5)
+        margin_top = Inches(1.5)  # Space for title
+        margin_bottom = Inches(0.75)  # Space for logo
+
+        # Title area
+        title_left = margin_left
+        title_top = Inches(0.3)
+        title_width = slide_width - margin_left - margin_right
+        title_height = Inches(1.0)
+
+        # Add title text box
+        title_box = pptx_slide.shapes.add_textbox(
+            title_left, title_top, title_width, title_height
+        )
+        title_tf = title_box.text_frame
+        title_tf.word_wrap = True
+        p = title_tf.paragraphs[0]
+        p.text = slide.title
+        p.font.size = Pt(32)
+        p.font.bold = True
+
+        # Image region (full width, excluding title and logo areas)
+        content_left = margin_left
+        content_top = margin_top
+        content_width = slide_width - margin_left - margin_right
+        content_bottom = slide_height - margin_bottom
+        content_height = content_bottom - content_top
+
+        # Split into two vertical slots with gutter
+        gutter = Inches(0.2)
+        slot_height = (content_height - gutter) / 2
+
+        # Top slot
+        top_slot_top = content_top
+        top_slot_height = slot_height
+
+        # Bottom slot
+        bottom_slot_top = content_top + slot_height + gutter
+        bottom_slot_height = slot_height
+
+        # Add first image (top)
+        image1_path = self._resolve_image_path(images[0].src)
+        if image1_path is not None:
+            self._add_scaled_image(
+                pptx_slide,
+                image1_path,
+                left=content_left,
+                top=top_slot_top,
+                max_width=content_width,
+                max_height=top_slot_height
+            )
+
+        # Add second image (bottom)
+        image2_path = self._resolve_image_path(images[1].src)
+        if image2_path is not None:
+            self._add_scaled_image(
+                pptx_slide,
+                image2_path,
+                left=content_left,
+                top=bottom_slot_top,
+                max_width=content_width,
+                max_height=bottom_slot_height
             )
 
         # Apply theme styling
