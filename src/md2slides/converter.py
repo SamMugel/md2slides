@@ -422,12 +422,14 @@ class MarkdownToPptxConverter:
                     if tag_name.startswith('bu'):
                         pPr.remove(child)
 
-                # Set indentation for proper alignment (issue #9: use "First line" indentation)
+                # Set indentation for PowerPoint-native hanging indentation (issue #12)
+                # marL = left margin (where bullet sits)
+                # indent = negative for hanging (text starts to the right of bullet)
                 indent_per_level = Inches(0.5)
                 left_margin = int(indent_per_level.emu * (item.level + 1))
-                first_line_indent = int(Inches(0.25).emu)
+                hanging_indent = int(Inches(0.25).emu)
                 pPr.set(qn('a:marL'), str(left_margin))
-                pPr.set(qn('a:indent'), str(first_line_indent))  # Positive = First line indent
+                pPr.set(qn('a:indent'), str(-hanging_indent))  # Negative = hanging indent
 
                 if item.ordered:
                     # Numbered list using buAutoNum

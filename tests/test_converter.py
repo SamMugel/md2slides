@@ -790,11 +790,11 @@ class TestListFormattingIssue1:
             assert number_count == 2
 
 
-class TestFirstLineIndentation:
-    """Test First line indentation for lists (issue #9)."""
+class TestHangingIndentation:
+    """Test PowerPoint-native hanging indentation for lists (issue #12)."""
 
-    def test_bullet_uses_first_line_indent(self):
-        """Bullet lists should use First line indent, not Hanging indent."""
+    def test_bullet_uses_hanging_indent(self):
+        """Bullet lists should use hanging indent (negative a:indent)."""
         content = """## Slide
 
 - First item
@@ -816,14 +816,15 @@ class TestFirstLineIndentation:
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             indent = pPr.get(qn('a:indent'))
-                            hanging = pPr.get(qn('a:hanging'))
-                            # First line indent requires positive indent and no hanging
+                            marL = pPr.get(qn('a:marL'))
+                            # Hanging indent requires negative indent and positive marL
                             assert indent is not None
-                            assert int(indent) > 0, f"Expected positive indent for First line, got {indent}"
-                            assert hanging in (None, "0"), f"Expected no hanging indent, got {hanging}"
+                            assert int(indent) < 0, f"Expected negative indent for hanging, got {indent}"
+                            assert marL is not None
+                            assert int(marL) > 0, f"Expected positive left margin, got {marL}"
 
-    def test_numbered_list_uses_first_line_indent(self):
-        """Numbered lists should use First line indent, not Hanging indent."""
+    def test_numbered_list_uses_hanging_indent(self):
+        """Numbered lists should use hanging indent (negative a:indent)."""
         content = """## Slide
 
 1. First step
@@ -845,14 +846,15 @@ class TestFirstLineIndentation:
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buAutoNum is not None:
                             indent = pPr.get(qn('a:indent'))
-                            hanging = pPr.get(qn('a:hanging'))
-                            # First line indent requires positive indent and no hanging
+                            marL = pPr.get(qn('a:marL'))
+                            # Hanging indent requires negative indent and positive marL
                             assert indent is not None
-                            assert int(indent) > 0, f"Expected positive indent for First line, got {indent}"
-                            assert hanging in (None, "0"), f"Expected no hanging indent, got {hanging}"
+                            assert int(indent) < 0, f"Expected negative indent for hanging, got {indent}"
+                            assert marL is not None
+                            assert int(marL) > 0, f"Expected positive left margin, got {marL}"
 
-    def test_nested_lists_use_first_line_indent(self):
-        """Nested lists should also use First line indent, not Hanging indent."""
+    def test_nested_lists_use_hanging_indent(self):
+        """Nested lists should also use hanging indent (negative a:indent)."""
         content = """## Slide
 
 - Parent bullet
@@ -878,11 +880,12 @@ class TestFirstLineIndentation:
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buChar is not None or buAutoNum is not None:
                             indent = pPr.get(qn('a:indent'))
-                            hanging = pPr.get(qn('a:hanging'))
-                            # First line indent requires positive indent and no hanging
+                            marL = pPr.get(qn('a:marL'))
+                            # Hanging indent requires negative indent and positive marL
                             assert indent is not None
-                            assert int(indent) > 0, f"Expected positive indent for First line, got {indent}"
-                            assert hanging in (None, "0"), f"Expected no hanging indent, got {hanging}"
+                            assert int(indent) < 0, f"Expected negative indent for hanging, got {indent}"
+                            assert marL is not None
+                            assert int(marL) > 0, f"Expected positive left margin, got {marL}"
                             indent_count += 1
 
             # Should have 4 list items total
