@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 12
-**Current Task:** ALL TASKS COMPLETE
+**Tasks Completed:** 13
+**Current Task:** Move PPTX templates into dedicated templates/ folder
 
 ---
 
@@ -267,3 +267,31 @@ python -m md2slides examples/theme-showcase.md -o themes.pptx # OK
 - README is comprehensive and well-organized
 - All features are documented
 - Examples directory is referenced
+
+### 2026-02-07 - Task 13: Move PPTX Templates into Dedicated templates/ Folder
+
+**Task completed:**
+13. Move PPTX templates into a dedicated templates/ folder and update codepaths
+
+**Changes made:**
+- templates/ directory already existed with multiverse_logo.png
+- Moved `archived-instructions/template.pptx` to `templates/template.pptx`
+- Created `md2slides/utils.py` with helper functions:
+  - `get_template_path(name)` - Get path to a template file
+  - `get_templates_dir()` - Get path to templates directory
+  - `list_templates()` - List all available template files
+
+**Commands run:**
+```bash
+mv archived-instructions/template.pptx templates/template.pptx  # Moved template
+python -m py_compile md2slides/utils.py  # Syntax check passed
+python -c "from md2slides.utils import get_template_path, list_templates; ..."  # Helper test passed
+python -m md2slides --help  # CLI still works
+python -m md2slides examples/simple.md -o test-output.pptx  # Conversion works
+```
+
+**Verification:**
+- templates/ directory contains: template.pptx, multiverse_logo.png
+- get_template_path() correctly resolves template paths
+- list_templates() returns ['template.pptx', 'multiverse_logo.png']
+- CLI continues to function normally
