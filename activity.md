@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 9
-**Current Task:** Implement table support
+**Tasks Completed:** 10
+**Current Task:** Create test markdown files
 
 ---
 
@@ -207,3 +207,24 @@ python -m md2slides examples/code-test.md -o code-test.pptx  # Creates PPTX with
 - Python and JavaScript code blocks render correctly
 
 **Note:** Pygments syntax highlighting not implemented (package unavailable due to network issues)
+
+### 2026-02-07 - Task 10: Implement Table Support
+
+**Task completed:**
+10. Implement table support
+
+**Changes made:**
+- Enhanced _add_table() in converter.py with theme styling
+- Added cell alignment support (left, center, right)
+- Headers are bold, data cells use theme body font
+- Created examples/table-test.md for testing
+
+**Commands run:**
+```bash
+python -m md2slides examples/table-test.md -o table-test.pptx  # Creates PPTX with tables
+```
+
+**Verification:**
+- Tables render with correct rows and columns
+- Headers are bold, data cells use normal weight
+- Alignment is applied to cells

@@ -203,6 +203,9 @@ class PresentationConverter:
 
     def _add_table(self, pptx_slide, table: Table) -> None:
         """Add a table to the slide as a separate shape."""
+        from pptx.dml.color import RGBColor
+        from pptx.enum.text import PP_ALIGN
+
         if not table.headers and not table.rows:
             return
 
@@ -217,11 +220,36 @@ class PresentationConverter:
 
         tbl = pptx_slide.shapes.add_table(rows, cols, left, top, width, height).table
 
+        # Map alignment strings to PowerPoint alignment
+        alignment_map = {
+            "left": PP_ALIGN.LEFT,
+            "center": PP_ALIGN.CENTER,
+            "right": PP_ALIGN.RIGHT,
+            None: PP_ALIGN.LEFT,
+        }
+
+        # Get theme colors for styling
+        header_color = RGBColor(*self._theme.colors.title_text)
+        body_color = RGBColor(*self._theme.colors.body_text)
+        body_font = self._theme.fonts.body_font
+        body_size = Pt(self._theme.fonts.body_size - 4)  # Slightly smaller for tables
+
         # Add headers
         if table.headers:
             for col_idx, header in enumerate(table.headers):
                 cell = tbl.cell(0, col_idx)
                 cell.text = header
+
+                # Style header cell
+                para = cell.text_frame.paragraphs[0]
+                para.font.name = body_font
+                para.font.size = body_size
+                para.font.bold = True
+                para.font.color.rgb = header_color
+
+                # Apply alignment
+                if col_idx < len(table.alignments):
+                    para.alignment = alignment_map.get(table.alignments[col_idx], PP_ALIGN.LEFT)
 
         # Add data rows
         start_row = 1 if table.headers else 0
@@ -229,6 +257,16 @@ class PresentationConverter:
             for col_idx, cell_text in enumerate(row_data):
                 cell = tbl.cell(start_row + row_idx, col_idx)
                 cell.text = cell_text
+
+                # Style data cell
+                para = cell.text_frame.paragraphs[0]
+                para.font.name = body_font
+                para.font.size = body_size
+                para.font.color.rgb = body_color
+
+                # Apply alignment
+                if col_idx < len(table.alignments):
+                    para.alignment = alignment_map.get(table.alignments[col_idx], PP_ALIGN.LEFT)
 
     def _add_image(self, pptx_slide, image: Image) -> None:
         """Add an image to the slide."""

@@ -224,7 +224,7 @@ md2slides --help
       "Handle cell alignment (left, center, right)",
       "Verify: markdown tables render as styled PPTX tables"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "testing",
