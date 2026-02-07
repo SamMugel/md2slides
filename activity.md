@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 10
-**Current Task:** Create test markdown files
+**Tasks Completed:** 11
+**Current Task:** Write README and documentation
 
 ---
 
@@ -228,3 +228,24 @@ python -m md2slides examples/table-test.md -o table-test.pptx  # Creates PPTX wi
 - Tables render with correct rows and columns
 - Headers are bold, data cells use normal weight
 - Alignment is applied to cells
+
+### 2026-02-07 - Task 11: Create Test Markdown Files
+
+**Task completed:**
+11. Create test markdown files
+
+**Changes made:**
+- Created examples/simple.md with basic headings and bullet lists
+- Created examples/full-featured.md with code, tables, and text
+- Created examples/theme-showcase.md to demonstrate all themes
+
+**Commands run:**
+```bash
+python -m md2slides examples/simple.md -o simple.pptx        # OK
+python -m md2slides examples/full-featured.md -o full.pptx   # OK
+python -m md2slides examples/theme-showcase.md -o themes.pptx # OK
+```
+
+**Verification:**
+- All 5 example files convert without errors
+- Each example demonstrates different md2slides features

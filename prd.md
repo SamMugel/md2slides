@@ -236,7 +236,7 @@ md2slides --help
       "Create theme-showcase.md to demonstrate all themes",
       "Verify: all example files convert without errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "documentation",
