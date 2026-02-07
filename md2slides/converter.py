@@ -11,6 +11,7 @@ from md2slides.parser import (
     BulletList,
     CodeBlock,
     Image,
+    InlineHeading,
     InlineSpan,
     ListItem,
     Presentation,
@@ -105,7 +106,7 @@ class PresentationConverter:
         """Add a content slide to the presentation."""
         # Check if this slide qualifies for 2-column layout (text + exactly 1 image)
         images = [e for e in slide.elements if isinstance(e, Image)]
-        text_elements = [e for e in slide.elements if isinstance(e, (TextElement, BulletList, CodeBlock))]
+        text_elements = [e for e in slide.elements if isinstance(e, (TextElement, BulletList, CodeBlock, InlineHeading))]
         tables = [e for e in slide.elements if isinstance(e, Table)]
 
         if len(images) == 1 and len(text_elements) > 0 and len(tables) == 0:
@@ -145,6 +146,10 @@ class PresentationConverter:
         for element in slide.elements:
             if isinstance(element, TextElement):
                 self._add_text_element(text_frame, element, first_element)
+                first_element = False
+
+            elif isinstance(element, InlineHeading):
+                self._add_inline_heading(text_frame, element, first_element)
                 first_element = False
 
             elif isinstance(element, BulletList):
@@ -232,6 +237,9 @@ class PresentationConverter:
         for element in text_elements:
             if isinstance(element, TextElement):
                 self._add_text_element(text_tf, element, first_element)
+                first_element = False
+            elif isinstance(element, InlineHeading):
+                self._add_inline_heading(text_tf, element, first_element)
                 first_element = False
             elif isinstance(element, BulletList):
                 self._add_bullet_list(text_tf, element, first_element)
@@ -409,6 +417,67 @@ class PresentationConverter:
         else:
             # Fallback to plain text
             p.text = element.text
+
+    def _add_inline_heading(
+        self, text_frame, heading: InlineHeading, is_first: bool
+    ) -> None:
+        """Add an inline H3 heading with following text, rendered as bold red."""
+        from pptx.dml.color import RGBColor
+
+        if is_first:
+            p = text_frame.paragraphs[0]
+        else:
+            p = text_frame.add_paragraph()
+
+        p.level = 0
+        self._disable_bullet(p)
+
+        # Add the H3 heading text as bold red
+        heading_run = p.add_run()
+        heading_run.text = heading.text
+        heading_run.font.bold = True
+        heading_run.font.color.rgb = RGBColor(0xFF, 0x00, 0x00)  # Red
+
+        # Add separator and following text if present
+        if heading.following_text or heading.following_spans:
+            # Check if heading already ends with punctuation
+            needs_separator = True
+            if heading.text and heading.text[-1] in ".,:;!?—-":
+                needs_separator = False
+
+            if needs_separator:
+                separator_run = p.add_run()
+                separator_run.text = " — "
+
+            # Add the following content
+            if heading.following_spans:
+                self._add_spans_to_run(p, heading.following_spans)
+            elif heading.following_text:
+                text_run = p.add_run()
+                text_run.text = heading.following_text
+
+    def _add_spans_to_run(self, paragraph, spans: list) -> None:
+        """Add inline spans as runs to an existing paragraph (no clear)."""
+        from pptx.dml.color import RGBColor
+
+        for span in spans:
+            run = paragraph.add_run()
+            run.text = span.text
+
+            # Apply hyperlink if present
+            if span.href:
+                run.hyperlink.address = span.href
+                run.font.color.rgb = RGBColor(0x05, 0x63, 0xC1)
+                run.font.underline = True
+
+            # Apply other formatting
+            if span.bold:
+                run.font.bold = True
+            if span.italic:
+                run.font.italic = True
+            if span.code:
+                run.font.name = self._theme.fonts.code_font
+                run.font.size = Pt(self._theme.fonts.code_size)
 
     def _add_spans_to_paragraph(self, paragraph, spans: list) -> None:
         """Add inline spans to a paragraph, supporting hyperlinks."""

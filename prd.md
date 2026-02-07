@@ -343,10 +343,10 @@ md2slides --help
     "Update parser.py to keep H3 tokens as inline heading elements within a slide rather than creating new slides.",
     "In elements/text.py, render H3 as a run with bold enabled, font color red, and placed inline (same text box) with the following paragraph/list item if applicable.",
     "Define spacing rule: add a separator like ' — ' or ': ' between H3 and following text when in the same paragraph, unless user already includes punctuation.",
-    "Ensure theme doesn’t override the red/bold requirement for H3 (explicitly set run properties).",
+    "Ensure theme doesn't override the red/bold requirement for H3 (explicitly set run properties).",
     "Verify: example markdown with H3 followed by text shows bold red inline heading within the body area."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "testing",

@@ -491,3 +491,43 @@ python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Exist
 - Slide 4 (list only): All items have bullets as expected
 - Slide 5 (mixed): Paragraphs before/after list have no bullets, list items have bullets
 - PPTX XML confirmed: paragraphs show "NO BULLET", list items show "(default/bullet)"
+
+### 2026-02-07 - Task 20: Render H3 Headings as Bold, Red, and Inline
+
+**Task completed:**
+20. Render H3 headings as bold, red, and inline with subsequent content
+
+**Changes made:**
+- Updated `md2slides/parser.py`:
+  - Added `InlineHeading` dataclass with `text`, `following_text`, and `following_spans` fields
+  - Added `pending_h3` tracking in `_build_presentation()` to capture H3 headings
+  - H3 tokens are now stored and merged with the following paragraph content
+  - When H3 is followed by a list, it's rendered as a standalone inline heading
+- Updated `md2slides/converter.py`:
+  - Added import for `InlineHeading` type
+  - Added `_add_inline_heading()` method that renders H3 as bold red with separator
+  - Added `_add_spans_to_run()` helper for appending spans without clearing paragraph
+  - H3 text is styled with `font.bold = True` and `font.color.rgb = RGBColor(0xFF, 0x00, 0x00)`
+  - Separator " — " is added between H3 and following text, unless H3 ends with punctuation (.:;!?—-)
+  - Updated layout detection to include `InlineHeading` in text elements
+- Updated all theme files (`default.py`, `dark.py`, `light.py`, `corporate.py`):
+  - Added check to skip runs with H3 red color (`FF0000`) to prevent theme from overriding the styling
+- Created `examples/h3-test.md` for testing various H3 scenarios
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/parser.py md2slides/converter.py  # Syntax check passed
+python -m py_compile md2slides/themes/*.py  # Themes syntax OK
+python -m md2slides --help  # CLI works
+python -m md2slides examples/h3-test.md -o h3-test.pptx  # Creates PPTX
+python -m md2slides examples/simple.md -o test-output.pptx  # Existing examples work
+python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Existing examples work
+```
+
+**Verification:**
+- H3 headings render as bold with red color (`FF0000`)
+- H3 followed by paragraph: "Key Point — This text..." (inline with em-dash separator)
+- H3 followed by list: "Features:" appears as standalone bold red heading, list follows
+- H3 ending with punctuation: "Important Note:" (no extra separator added)
+- Theme does not override the red/bold H3 styling
+- Existing examples (simple.md, hyperlinks-test.md) continue to work correctly

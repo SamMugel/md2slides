@@ -66,8 +66,17 @@ class Image:
     title: str = ""
 
 
+@dataclass
+class InlineHeading:
+    """An inline H3 heading that appears inline with following content."""
+    text: str
+    # Content that follows this heading (paragraph or list item)
+    following_text: str = ""
+    following_spans: List["InlineSpan"] = field(default_factory=list)
+
+
 # Union type for all slide content elements
-SlideElement = Union[TextElement, BulletList, CodeBlock, Table, Image]
+SlideElement = Union[TextElement, BulletList, CodeBlock, Table, Image, "InlineHeading"]
 
 
 @dataclass
@@ -109,6 +118,7 @@ class MarkdownParser:
         current_section: Optional[Section] = None
         current_slide: Optional[Slide] = None
         awaiting_subtitle = False  # True when we just saw an H1 and expect a subtitle
+        pending_h3: Optional[str] = None  # H3 text waiting for following content
 
         for token in tokens:
             token_type = token.get("type")
@@ -125,16 +135,23 @@ class MarkdownParser:
                     presentation.sections.append(current_section)
                     current_slide = None
                     awaiting_subtitle = True  # Next paragraph could be a subtitle
+                    pending_h3 = None  # Clear any pending H3
 
                 elif level == 2:
                     # H2 creates a new slide (and consumes any pending subtitle expectation)
                     awaiting_subtitle = False
+                    pending_h3 = None  # Clear any pending H3
                     current_slide = Slide(title=text)
                     if current_section is None:
                         # Create a default section if none exists
                         current_section = Section(title=presentation.title or "Untitled")
                         presentation.sections.append(current_section)
                     current_section.slides.append(current_slide)
+
+                elif level == 3:
+                    # H3 is an inline heading - store it to merge with next content
+                    awaiting_subtitle = False
+                    pending_h3 = text
 
             elif token_type == "paragraph":
                 # Check if this paragraph should be treated as a section subtitle
@@ -144,6 +161,7 @@ class MarkdownParser:
                     if text:
                         current_section.subtitle = text
                     awaiting_subtitle = False
+                    pending_h3 = None  # Clear any pending H3
                     continue  # Don't process this paragraph as slide content
 
                 awaiting_subtitle = False  # Any other content clears the subtitle expectation
@@ -158,12 +176,33 @@ class MarkdownParser:
                     spans = self._extract_inline_spans(token.get("children", []))
                     # Also get plain text for backwards compatibility
                     text = self._extract_text_excluding_images(token.get("children", []))
-                    if text:
+
+                    if pending_h3:
+                        # Create an InlineHeading that combines H3 with this paragraph
+                        current_slide.elements.append(InlineHeading(
+                            text=pending_h3,
+                            following_text=text,
+                            following_spans=spans
+                        ))
+                        pending_h3 = None
+                    elif text:
                         current_slide.elements.append(TextElement(text=text, spans=spans))
 
             elif token_type == "list":
+                awaiting_subtitle = False  # List clears subtitle expectation
                 if current_slide is not None:
                     bullet_list = self._parse_list(token)
+
+                    if pending_h3:
+                        # Create an InlineHeading for the H3, then add the list separately
+                        # The H3 will be rendered inline with the first list item
+                        current_slide.elements.append(InlineHeading(
+                            text=pending_h3,
+                            following_text="",
+                            following_spans=[]
+                        ))
+                        pending_h3 = None
+
                     current_slide.elements.append(bullet_list)
 
             elif token_type == "block_code":

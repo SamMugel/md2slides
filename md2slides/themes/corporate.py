@@ -41,6 +41,9 @@ class CorporateTheme(BaseTheme):
 
     def apply_to_content_slide(self, slide):
         """Apply theme settings to a content slide."""
+        # Red color used for H3 inline headings - should not be overridden
+        H3_RED = RGBColor(0xFF, 0x00, 0x00)
+
         for shape in slide.shapes:
             if not shape.has_text_frame:
                 continue
@@ -52,6 +55,13 @@ class CorporateTheme(BaseTheme):
                     # Skip code runs (already styled with monospace font)
                     if run.font.name == self.fonts.code_font:
                         continue
+
+                    # Skip H3 inline headings (styled with red color)
+                    try:
+                        if run.font.color.rgb == H3_RED:
+                            continue
+                    except (TypeError, AttributeError):
+                        pass
 
                     if is_title:
                         run.font.name = self.fonts.title_font
