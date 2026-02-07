@@ -633,8 +633,8 @@ class TestStyleEnhancements:
                                 found_parent = True
             assert found_parent is True
 
-    def test_list_items_have_spacing(self):
-        """List items should have 4 spaces after bullet/number."""
+    def test_list_items_have_no_leading_spaces(self):
+        """List items should NOT have leading spaces (issue #1)."""
         content = """## Slide
 
 - Test item
@@ -647,17 +647,138 @@ class TestStyleEnhancements:
             prs = Presentation(output_path)
             slide = prs.slides[0]
 
-            # Find the content shape and verify spacing run exists
-            found_spacing = False
+            # Find the content shape and verify no spacing-only runs
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
                         runs = list(para.runs)
-                        # First run should be 4 spaces
-                        for i, run in enumerate(runs):
-                            if run.text == "    ":
-                                found_spacing = True
-            assert found_spacing is True
+                        for run in runs:
+                            # No run should be only spaces
+                            assert run.text.strip() != "" or run.text == ""
+
+
+class TestListFormattingIssue1:
+    """Test list formatting fixes from issue #1."""
+
+    def test_bullet_has_proper_indentation(self):
+        """Bullet points should have proper PPTX indentation."""
+        content = """## Slide
+
+- First item
+- Second item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find paragraphs with bullet chars and verify indentation
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        if buChar is not None:
+                            # Check indentation is set
+                            marL = pPr.get(qn('a:marL'))
+                            indent = pPr.get(qn('a:indent'))
+                            assert marL is not None, "marL should be set"
+                            assert indent is not None, "indent should be set"
+
+    def test_numbered_list_has_proper_indentation(self):
+        """Numbered lists should have proper PPTX indentation."""
+        content = """## Slide
+
+1. First step
+2. Second step
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Find paragraphs with auto numbering and verify indentation
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buAutoNum is not None:
+                            marL = pPr.get(qn('a:marL'))
+                            indent = pPr.get(qn('a:indent'))
+                            assert marL is not None, "marL should be set"
+                            assert indent is not None, "indent should be set"
+
+    def test_nested_bullets_have_increasing_indentation(self):
+        """Nested bullets should have increasing indentation levels."""
+        content = """## Slide
+
+- Parent item
+  - Child item
+    - Grandchild item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Collect indentation values
+            indents = []
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        if buChar is not None:
+                            marL = int(pPr.get(qn('a:marL')))
+                            indents.append(marL)
+
+            assert len(indents) == 3
+            # Each level should have greater indentation
+            assert indents[0] < indents[1] < indents[2]
+
+    def test_mixed_lists_work_correctly(self):
+        """Mixed bullet and numbered lists should work correctly."""
+        content = """## Slide
+
+- Top-level bullet
+  1. Numbered sub-item
+  2. Another numbered sub-item
+- Another top-level bullet
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            # Count bullets and numbers
+            bullet_count = 0
+            number_count = 0
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buChar is not None:
+                            bullet_count += 1
+                        if buAutoNum is not None:
+                            number_count += 1
+
+            assert bullet_count == 2
+            assert number_count == 2
 
 
 class TestLogoPlacement:
@@ -1198,3 +1319,202 @@ class TestImageSupport:
                     # Image should fit within right half (max ~6.2 inches)
                     max_width = Inches(6.5)
                     assert shape.width <= max_width
+
+
+class TestSectionTitleStyling:
+    """Test section title (H3/H4) styling (issue #8)."""
+
+    def test_h3_section_title_is_bold_red(self):
+        """H3 section titles should be bold and red (#FF0000)."""
+        content = """## Slide
+
+### Section Title
+
+- Content
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_section_title = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Title" in run.text:
+                                assert run.font.bold is True
+                                assert run.font.color.rgb == (0xFF, 0x00, 0x00)
+                                found_section_title = True
+            assert found_section_title is True
+
+    def test_h4_section_subtitle_is_bold_black(self):
+        """H4 section subtitles should be bold and black (#111417)."""
+        content = """## Slide
+
+#### Section Subtitle
+
+- Content
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_section_subtitle = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Subtitle" in run.text:
+                                assert run.font.bold is True
+                                assert run.font.color.rgb == (0x11, 0x14, 0x17)
+                                found_section_subtitle = True
+            assert found_section_subtitle is True
+
+    def test_section_title_has_half_line_space_before(self):
+        """Section titles should have half line space before (9pt)."""
+        content = """## Slide
+
+- Item before
+
+### Section Title
+
+- Item after
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_spacing = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Title" in run.text:
+                                assert para.space_before is not None
+                                assert para.space_before.pt == 9
+                                found_spacing = True
+            assert found_spacing is True
+
+    def test_section_title_has_half_line_space_after(self):
+        """Section titles should have half line space after (9pt)."""
+        content = """## Slide
+
+### Section Title
+
+- Item after
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_spacing = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Title" in run.text:
+                                assert para.space_after is not None
+                                assert para.space_after.pt == 9
+                                found_spacing = True
+            assert found_spacing is True
+
+    def test_h3_and_h4_different_colors(self):
+        """H3 and H4 in the same slide should have different colors."""
+        content = """## Slide
+
+### H3 Title
+
+#### H4 Title
+
+- Content
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            h3_color = None
+            h4_color = None
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "H3 Title" in run.text:
+                                h3_color = run.font.color.rgb
+                            if "H4 Title" in run.text:
+                                h4_color = run.font.color.rgb
+
+            assert h3_color == (0xFF, 0x00, 0x00)  # Red
+            assert h4_color == (0x11, 0x14, 0x17)  # Woodsmoke/black
+            assert h3_color != h4_color
+
+    def test_section_title_uses_body_font_size(self):
+        """Section titles should use the body font size (18pt)."""
+        content = """## Slide
+
+### Section Title
+
+- Content
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_section_title = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Title" in run.text:
+                                assert run.font.size.pt == 18
+                                found_section_title = True
+            assert found_section_title is True
+
+    def test_section_title_uses_body_font(self):
+        """Section titles should use Open Sans font."""
+        content = """## Slide
+
+### Section Title
+
+- Content
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            found_section_title = False
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        for run in para.runs:
+                            if "Section Title" in run.text:
+                                assert run.font.name == "Open Sans"
+                                found_section_title = True
+            assert found_section_title is True

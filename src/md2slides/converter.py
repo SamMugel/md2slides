@@ -13,7 +13,7 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR, MSO_AUTO_SIZE
 
-from md2slides.parser import Image, ListItem, MarkdownParser, Slide, TextRun, ValidationError
+from md2slides.parser import Image, ListItem, MarkdownParser, SectionTitle, Slide, TextRun, ValidationError
 
 # Bullet characters for different indentation levels
 BULLET_CHARS = ['•', '–', '◦', '▪']
@@ -39,8 +39,7 @@ FONT_BODY = "Open Sans"
 LOGO_WIDTH = Inches(3.15)  # 4.5 * 0.7 = 3.15 inches (30% smaller)
 LOGO_MARGIN = Inches(0.5)
 
-# List formatting (issue #3: add 4 spaces after bullet/number)
-LIST_ITEM_SPACING = "    "  # 4 spaces after bullet/number
+# List formatting removed per issue #1 - no extra spaces after bullet/number
 
 # Line spacing (issue #4: add half space between lines)
 LINE_SPACING_FACTOR = 1.5  # 1.0 = single, 1.5 = one and a half
@@ -393,7 +392,7 @@ class MarkdownToPptxConverter:
         self._add_logo_to_slide(slide)
 
     def _render_content(
-        self, text_frame, content: List[Union[ListItem, TextRun]]
+        self, text_frame, content: List[Union[ListItem, TextRun, SectionTitle]]
     ) -> None:
         """Render content to a text frame.
 
@@ -451,12 +450,8 @@ class MarkdownToPptxConverter:
                 # Determine text color based on nesting level (issue #3)
                 text_color = BRAND_DARK_GREY if item.level > 0 else BRAND_WOODSMOKE
 
-                # Add 4 spaces after bullet/number (issue #3)
-                spacing_run = para.add_run()
-                spacing_run.text = LIST_ITEM_SPACING
-                spacing_run.font.size = FONT_SIZE_BODY
-                spacing_run.font.name = FONT_BODY
-                spacing_run.font.color.rgb = text_color
+                # No extra spaces after bullet/number per issue #1
+                # The indentation is handled by paragraph properties (marL, indent)
 
                 # Add content with formatting
                 for text_run in item.content:
@@ -473,6 +468,29 @@ class MarkdownToPptxConverter:
                         run.font.underline = True
                     else:
                         run.font.color.rgb = text_color
+
+            elif isinstance(item, SectionTitle):
+                if first_item:
+                    para = text_frame.paragraphs[0]
+                    first_item = False
+                else:
+                    para = text_frame.add_paragraph()
+
+                # Add half line space before and after section titles (issue #8)
+                para.space_before = Pt(9)  # Half of 18pt = 9pt before
+                para.space_after = Pt(9)   # Half of 18pt = 9pt after
+
+                run = para.add_run()
+                run.text = item.text
+                run.font.size = FONT_SIZE_BODY
+                run.font.name = FONT_BODY
+                run.font.bold = True  # Section titles are always bold
+
+                # H3 (level 3) = bold red, H4 (level 4) = bold black (issue #8)
+                if item.level == 3:
+                    run.font.color.rgb = BRAND_RED  # #FF0000
+                else:
+                    run.font.color.rgb = BRAND_WOODSMOKE  # Black/dark
 
             elif isinstance(item, TextRun):
                 if first_item:
