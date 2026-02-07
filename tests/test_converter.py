@@ -785,7 +785,7 @@ class TestFirstLineIndentation:
     """Test First line indentation for lists (issue #9)."""
 
     def test_bullet_uses_first_line_indent(self):
-        """Bullet lists should use positive (First line) indent."""
+        """Bullet lists should use First line indent, not Hanging indent."""
         content = """## Slide
 
 - First item
@@ -806,12 +806,14 @@ class TestFirstLineIndentation:
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             indent = pPr.get(qn('a:indent'))
+                            hanging = pPr.get(qn('a:hanging'))
+                            # First line indent requires positive indent and no hanging
                             assert indent is not None
-                            # First line indent = positive value
-                            assert int(indent) > 0, f"Expected positive indent (First line), got {indent}"
+                            assert int(indent) > 0, f"Expected positive indent for First line, got {indent}"
+                            assert hanging in (None, "0"), f"Expected no hanging indent, got {hanging}"
 
     def test_numbered_list_uses_first_line_indent(self):
-        """Numbered lists should use positive (First line) indent."""
+        """Numbered lists should use First line indent, not Hanging indent."""
         content = """## Slide
 
 1. First step
@@ -832,12 +834,14 @@ class TestFirstLineIndentation:
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buAutoNum is not None:
                             indent = pPr.get(qn('a:indent'))
+                            hanging = pPr.get(qn('a:hanging'))
+                            # First line indent requires positive indent and no hanging
                             assert indent is not None
-                            # First line indent = positive value
-                            assert int(indent) > 0, f"Expected positive indent (First line), got {indent}"
+                            assert int(indent) > 0, f"Expected positive indent for First line, got {indent}"
+                            assert hanging in (None, "0"), f"Expected no hanging indent, got {hanging}"
 
     def test_nested_lists_use_first_line_indent(self):
-        """Nested lists should also use positive (First line) indent."""
+        """Nested lists should also use First line indent, not Hanging indent."""
         content = """## Slide
 
 - Parent bullet
@@ -862,9 +866,11 @@ class TestFirstLineIndentation:
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buChar is not None or buAutoNum is not None:
                             indent = pPr.get(qn('a:indent'))
+                            hanging = pPr.get(qn('a:hanging'))
+                            # First line indent requires positive indent and no hanging
                             assert indent is not None
-                            # First line indent = positive value
-                            assert int(indent) > 0, f"Expected positive indent (First line), got {indent}"
+                            assert int(indent) > 0, f"Expected positive indent for First line, got {indent}"
+                            assert hanging in (None, "0"), f"Expected no hanging indent, got {hanging}"
                             indent_count += 1
 
             # Should have 4 list items total
