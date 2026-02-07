@@ -140,7 +140,7 @@ md2slides --help
       "Return structured representation of slides",
       "Verify: parse test markdown file and print structure"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

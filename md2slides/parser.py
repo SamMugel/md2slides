@@ -1,0 +1,232 @@
+"""Markdown parsing logic for md2slides."""
+
+from dataclasses import dataclass, field
+from typing import List, Optional, Union
+
+import mistune
+from mistune.plugins.table import table as table_plugin
+
+
+@dataclass
+class TextElement:
+    """A text element (paragraph or inline text)."""
+    text: str
+    bold: bool = False
+    italic: bool = False
+    code: bool = False
+
+
+@dataclass
+class ListItem:
+    """A single list item, which may contain nested lists."""
+    text: str
+    children: List["ListItem"] = field(default_factory=list)
+
+
+@dataclass
+class BulletList:
+    """A bullet list element."""
+    items: List[ListItem] = field(default_factory=list)
+    ordered: bool = False
+
+
+@dataclass
+class CodeBlock:
+    """A fenced code block."""
+    code: str
+    language: Optional[str] = None
+
+
+@dataclass
+class Table:
+    """A markdown table."""
+    headers: List[str] = field(default_factory=list)
+    rows: List[List[str]] = field(default_factory=list)
+    alignments: List[Optional[str]] = field(default_factory=list)
+
+
+@dataclass
+class Image:
+    """An image reference."""
+    src: str
+    alt: str = ""
+    title: str = ""
+
+
+# Union type for all slide content elements
+SlideElement = Union[TextElement, BulletList, CodeBlock, Table, Image]
+
+
+@dataclass
+class Slide:
+    """A single slide in the presentation."""
+    title: str
+    elements: List[SlideElement] = field(default_factory=list)
+
+
+@dataclass
+class Section:
+    """A section of the presentation (defined by H1)."""
+    title: str
+    slides: List[Slide] = field(default_factory=list)
+
+
+@dataclass
+class Presentation:
+    """The complete parsed presentation structure."""
+    title: str = ""
+    sections: List[Section] = field(default_factory=list)
+
+
+class MarkdownParser:
+    """Parse markdown into a structured presentation format."""
+
+    def __init__(self):
+        self._md = mistune.create_markdown(renderer=None, plugins=[table_plugin])
+
+    def parse(self, markdown_text: str) -> Presentation:
+        """Parse markdown text into a Presentation structure."""
+        tokens = self._md(markdown_text)
+        return self._build_presentation(tokens)
+
+    def _build_presentation(self, tokens: list) -> Presentation:
+        """Build a Presentation from mistune tokens."""
+        presentation = Presentation()
+        current_section: Optional[Section] = None
+        current_slide: Optional[Slide] = None
+
+        for token in tokens:
+            token_type = token.get("type")
+
+            if token_type == "heading":
+                level = token["attrs"]["level"]
+                text = self._extract_text(token.get("children", []))
+
+                if level == 1:
+                    # H1 creates a new section
+                    if not presentation.title:
+                        presentation.title = text
+                    current_section = Section(title=text)
+                    presentation.sections.append(current_section)
+                    current_slide = None
+
+                elif level == 2:
+                    # H2 creates a new slide
+                    current_slide = Slide(title=text)
+                    if current_section is None:
+                        # Create a default section if none exists
+                        current_section = Section(title=presentation.title or "Untitled")
+                        presentation.sections.append(current_section)
+                    current_section.slides.append(current_slide)
+
+            elif token_type == "paragraph":
+                if current_slide is not None:
+                    text = self._extract_text(token.get("children", []))
+                    if text:
+                        current_slide.elements.append(TextElement(text=text))
+
+            elif token_type == "list":
+                if current_slide is not None:
+                    bullet_list = self._parse_list(token)
+                    current_slide.elements.append(bullet_list)
+
+            elif token_type == "block_code":
+                if current_slide is not None:
+                    code = token.get("raw", "")
+                    info = token.get("attrs", {}).get("info")
+                    current_slide.elements.append(CodeBlock(code=code, language=info))
+
+            elif token_type == "table":
+                if current_slide is not None:
+                    table = self._parse_table(token)
+                    current_slide.elements.append(table)
+
+        return presentation
+
+    def _extract_text(self, children: list) -> str:
+        """Extract plain text from a list of inline tokens."""
+        parts = []
+        for child in children:
+            child_type = child.get("type")
+            if child_type == "text":
+                parts.append(child.get("raw", ""))
+            elif child_type == "codespan":
+                parts.append(child.get("raw", ""))
+            elif child_type == "emphasis":
+                parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "strong":
+                parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "link":
+                parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "image":
+                parts.append(child.get("attrs", {}).get("alt", ""))
+            elif child_type == "softbreak":
+                parts.append(" ")
+            elif child_type == "linebreak":
+                parts.append("\n")
+        return "".join(parts)
+
+    def _parse_list(self, token: dict) -> BulletList:
+        """Parse a list token into a BulletList."""
+        ordered = token.get("attrs", {}).get("ordered", False)
+        items = []
+
+        for item_token in token.get("children", []):
+            if item_token.get("type") == "list_item":
+                list_item = self._parse_list_item(item_token)
+                items.append(list_item)
+
+        return BulletList(items=items, ordered=ordered)
+
+    def _parse_list_item(self, token: dict) -> ListItem:
+        """Parse a list_item token into a ListItem."""
+        text_parts = []
+        children = []
+
+        for child in token.get("children", []):
+            child_type = child.get("type")
+            if child_type in ("block_text", "paragraph"):
+                text_parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "list":
+                # Nested list
+                nested_list = self._parse_list(child)
+                children.extend(nested_list.items)
+
+        return ListItem(text=" ".join(text_parts), children=children)
+
+    def _parse_table(self, token: dict) -> Table:
+        """Parse a table token into a Table."""
+        headers = []
+        rows = []
+        alignments = []
+
+        for child in token.get("children", []):
+            child_type = child.get("type")
+
+            if child_type == "table_head":
+                # table_head contains table_cell directly (headers)
+                for cell in child.get("children", []):
+                    if cell.get("type") == "table_cell":
+                        text = self._extract_text(cell.get("children", []))
+                        headers.append(text)
+                        align = cell.get("attrs", {}).get("align")
+                        alignments.append(align)
+
+            elif child_type == "table_body":
+                # table_body contains table_row elements
+                for row in child.get("children", []):
+                    if row.get("type") == "table_row":
+                        row_data = []
+                        for cell in row.get("children", []):
+                            if cell.get("type") == "table_cell":
+                                text = self._extract_text(cell.get("children", []))
+                                row_data.append(text)
+                        rows.append(row_data)
+
+        return Table(headers=headers, rows=rows, alignments=alignments)
+
+
+def parse_markdown(markdown_text: str) -> Presentation:
+    """Convenience function to parse markdown text."""
+    parser = MarkdownParser()
+    return parser.parse(markdown_text)

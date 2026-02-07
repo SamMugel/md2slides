@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 2
-**Current Task:** Implement markdown parser
+**Tasks Completed:** 3
+**Current Task:** Implement basic PPTX converter
 
 ---
 
@@ -45,3 +45,28 @@ python -m md2slides --list-themes    # Lists 4 themes
 - Network issues prevented pip/conda from installing packages
 - Resolved by using `argparse` (stdlib) instead of `click`, and `mistune` (already installed) instead of `markdown-it-py`
 - All dependencies now available: python-pptx, mistune are installed
+
+### 2026-02-07 - Task 3: Implement Markdown Parser
+
+**Task completed:**
+3. Implement markdown parser
+
+**Changes made:**
+- Created `md2slides/parser.py` with MarkdownParser class
+- Implemented parsing of H1 (sections), H2 (slides), paragraphs, bullet lists, nested lists
+- Added support for code blocks with language detection
+- Added table parsing support using mistune's table plugin
+- Created data classes: Presentation, Section, Slide, TextElement, BulletList, ListItem, CodeBlock, Table, Image
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/parser.py  # Syntax check passed
+python -c "from md2slides.parser import parse_markdown; ..."  # Parse test passed
+```
+
+**Verification:**
+- Parser correctly extracts presentation title from first H1
+- Parser creates slides from H2 headings
+- Bullet lists with nesting are properly parsed
+- Code blocks retain language info (e.g., python, javascript)
+- Tables are parsed with headers, rows, and alignments
