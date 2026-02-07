@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 7
-**Current Task:** Implement image handling
+**Tasks Completed:** 8
+**Current Task:** Implement code block handling
 
 ---
 
@@ -162,3 +162,25 @@ python -m md2slides resources/example.md --theme corporate -o corporate-test.ppt
 - All four themes (default, dark, light, corporate) produce distinct PPTX files
 - --list-themes shows all available themes
 - --theme flag properly selects the theme
+
+### 2026-02-07 - Task 8: Implement Image Handling
+
+**Task completed:**
+8. Implement image handling
+
+**Changes made:**
+- Updated parser.py to detect image tokens (both standalone and inline patterns)
+- Added _extract_images() and _extract_text_excluding_images() methods
+- Updated converter.py to embed local images in slides
+- Added _add_image() and _resolve_image_path() methods
+- Images are automatically sized to max 6 inches width
+
+**Commands run:**
+```bash
+python -m md2slides resources/example.md -o image-test.pptx  # Creates PPTX with image
+```
+
+**Verification:**
+- Images are detected in markdown (![alt](src) syntax)
+- Local images are embedded in slides (file size increased from 32KB to 38KB)
+- Image is positioned and sized appropriately (6.00in x 3.36in)

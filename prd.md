@@ -200,7 +200,7 @@ md2slides --help
       "Position and size images appropriately",
       "Verify: markdown with images produces slides with embedded images"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

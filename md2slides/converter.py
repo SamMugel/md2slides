@@ -33,6 +33,7 @@ class PresentationConverter:
         self.theme_name = theme
         self._theme = get_theme(theme)
         self._prs: Optional[PptxPresentation] = None
+        self._input_dir: Optional[Path] = None  # For resolving relative image paths
 
     def convert(self, presentation: Presentation) -> PptxPresentation:
         """Convert a parsed Presentation to a PowerPoint presentation."""
@@ -57,6 +58,9 @@ class PresentationConverter:
         """Convert a markdown file to a PowerPoint file."""
         input_path = Path(input_path)
         output_path = Path(output_path)
+
+        # Store input directory for resolving relative image paths
+        self._input_dir = input_path.parent
 
         with open(input_path, "r", encoding="utf-8") as f:
             markdown_text = f.read()
@@ -127,6 +131,10 @@ class PresentationConverter:
             elif isinstance(element, Table):
                 # Tables need special handling - add as a shape
                 self._add_table(pptx_slide, element)
+
+            elif isinstance(element, Image):
+                # Images are added as separate shapes
+                self._add_image(pptx_slide, element)
 
         # Apply theme styling
         self._theme.apply_to_content_slide(pptx_slide)
@@ -216,6 +224,55 @@ class PresentationConverter:
             for col_idx, cell_text in enumerate(row_data):
                 cell = tbl.cell(start_row + row_idx, col_idx)
                 cell.text = cell_text
+
+    def _add_image(self, pptx_slide, image: Image) -> None:
+        """Add an image to the slide."""
+        image_path = self._resolve_image_path(image.src)
+
+        if image_path is None:
+            # Image not found, skip it
+            return
+
+        # Position and size the image
+        left = Inches(2)
+        top = Inches(2)
+        # Let python-pptx auto-calculate width to maintain aspect ratio
+        # Max width is 6 inches to leave room on the slide
+        max_width = Inches(6)
+
+        try:
+            pptx_slide.shapes.add_picture(str(image_path), left, top, width=max_width)
+        except Exception:
+            # If image fails to load, skip it silently
+            pass
+
+    def _resolve_image_path(self, src: str) -> Optional[Path]:
+        """Resolve an image path (local or URL)."""
+        # Handle URLs - not supported yet, return None
+        if src.startswith(("http://", "https://")):
+            # TODO: Download remote images
+            return None
+
+        # Handle local paths
+        path = Path(src)
+
+        # If absolute path, use as-is
+        if path.is_absolute():
+            if path.exists():
+                return path
+            return None
+
+        # Relative path - resolve relative to input file directory
+        if self._input_dir:
+            resolved = self._input_dir / path
+            if resolved.exists():
+                return resolved
+
+        # Try relative to current directory
+        if path.exists():
+            return path
+
+        return None
 
 
 def convert_markdown_to_pptx(

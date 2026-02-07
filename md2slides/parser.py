@@ -121,7 +121,13 @@ class MarkdownParser:
 
             elif token_type == "paragraph":
                 if current_slide is not None:
-                    text = self._extract_text(token.get("children", []))
+                    # Check for images in paragraph
+                    images = self._extract_images(token.get("children", []))
+                    for img in images:
+                        current_slide.elements.append(img)
+
+                    # Also add any text that's not part of an image
+                    text = self._extract_text_excluding_images(token.get("children", []))
                     if text:
                         current_slide.elements.append(TextElement(text=text))
 
@@ -165,6 +171,92 @@ class MarkdownParser:
             elif child_type == "linebreak":
                 parts.append("\n")
         return "".join(parts)
+
+    def _extract_images(self, children: list) -> List[Image]:
+        """Extract images from inline tokens.
+
+        Mistune can parse images in two ways:
+        1. As 'image' tokens (when on their own line)
+        2. As text("!") followed by link (when inline with text)
+        """
+        images = []
+        i = 0
+        while i < len(children):
+            child = children[i]
+            child_type = child.get("type")
+
+            # Handle direct image tokens
+            if child_type == "image":
+                attrs = child.get("attrs", {})
+                alt = self._extract_text(child.get("children", []))
+                src = attrs.get("url", "")
+                title = attrs.get("title", "")
+                images.append(Image(src=src, alt=alt, title=title))
+                i += 1
+                continue
+
+            # Look for pattern: text with "!" followed by link (inline images)
+            if (
+                child_type == "text"
+                and child.get("raw", "").endswith("!")
+                and i + 1 < len(children)
+                and children[i + 1].get("type") == "link"
+            ):
+                link = children[i + 1]
+                attrs = link.get("attrs", {})
+                alt = self._extract_text(link.get("children", []))
+                src = attrs.get("url", "")
+                title = attrs.get("title", "")
+                images.append(Image(src=src, alt=alt, title=title))
+                i += 2  # Skip both the "!" text and the link
+            else:
+                i += 1
+        return images
+
+    def _extract_text_excluding_images(self, children: list) -> str:
+        """Extract text from inline tokens, excluding image patterns."""
+        parts = []
+        i = 0
+        while i < len(children):
+            child = children[i]
+            child_type = child.get("type")
+
+            # Skip image tokens
+            if child_type == "image":
+                i += 1
+                continue
+
+            # Skip image patterns (text ending with "!" followed by link)
+            if (
+                child_type == "text"
+                and child.get("raw", "").endswith("!")
+                and i + 1 < len(children)
+                and children[i + 1].get("type") == "link"
+            ):
+                # Add any text before the "!"
+                raw = child.get("raw", "")
+                if len(raw) > 1:
+                    parts.append(raw[:-1])
+                i += 2  # Skip both
+                continue
+
+            if child_type == "text":
+                parts.append(child.get("raw", ""))
+            elif child_type == "codespan":
+                parts.append(child.get("raw", ""))
+            elif child_type == "emphasis":
+                parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "strong":
+                parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "link":
+                parts.append(self._extract_text(child.get("children", [])))
+            elif child_type == "softbreak":
+                parts.append(" ")
+            elif child_type == "linebreak":
+                parts.append("\n")
+            i += 1
+
+        return "".join(parts).strip()
 
     def _parse_list(self, token: dict) -> BulletList:
         """Parse a list token into a BulletList."""
