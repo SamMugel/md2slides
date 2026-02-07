@@ -152,7 +152,7 @@ md2slides --help
       "Add body text and bullet points to slides",
       "Verify: generate basic PPTX from test markdown"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

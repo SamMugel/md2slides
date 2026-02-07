@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 3
-**Current Task:** Implement basic PPTX converter
+**Tasks Completed:** 4
+**Current Task:** Wire up CLI to parser and converter
 
 ---
 
@@ -70,3 +70,26 @@ python -c "from md2slides.parser import parse_markdown; ..."  # Parse test passe
 - Bullet lists with nesting are properly parsed
 - Code blocks retain language info (e.g., python, javascript)
 - Tables are parsed with headers, rows, and alignments
+
+### 2026-02-07 - Task 4: Implement Basic PPTX Converter
+
+**Task completed:**
+4. Implement basic PPTX converter
+
+**Changes made:**
+- Created `md2slides/converter.py` with PresentationConverter class
+- Implemented title slide creation from first H1
+- Implemented content slides from H2 headings
+- Added text paragraphs and bullet lists (including nested) to slides
+- Added basic code block and table support
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/converter.py  # Syntax check passed
+python -c "from md2slides.converter import convert_markdown_to_pptx; ..."  # Test passed
+```
+
+**Verification:**
+- Generated test-output.pptx with 3 slides (title + 2 content)
+- Generated example-output.pptx from resources/example.md with 5 slides
+- All PPTX files open correctly
