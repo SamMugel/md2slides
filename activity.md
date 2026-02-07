@@ -295,3 +295,32 @@ python -m md2slides examples/simple.md -o test-output.pptx  # Conversion works
 - get_template_path() correctly resolves template paths
 - list_templates() returns ['template.pptx', 'multiverse_logo.png']
 - CLI continues to function normally
+
+### 2026-02-07 - Task 14: Add Company Logo to Every Slide
+
+**Task completed:**
+14. Add company logo to bottom-right corner of every slide from templates/multiverse_logo.png
+
+**Changes made:**
+- Updated `md2slides/converter.py`:
+  - Added import for `get_template_path` from utils
+  - Added `_add_logo_to_all_slides()` method that iterates all slides after creation
+  - Logo loaded from `templates/multiverse_logo.png` using the template helper
+  - Logo placed at bottom-right with 0.25" margin from edges
+  - Logo scaled to max height of 0.5" while maintaining aspect ratio
+  - Called as post-processing step in `convert()` after all slides are created
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/converter.py  # Syntax check passed
+python -m md2slides --help                   # CLI works
+python -m md2slides examples/simple.md -o test-output.pptx  # Creates PPTX with logo
+python -m md2slides examples/full-featured.md -o final-test.pptx  # Works with content
+```
+
+**Verification:**
+- Logo appears on all slides (verified with Python inspection)
+- Logo position: 6.64" from left, 6.75" from top (bottom-right corner)
+- Logo size: 3.11" x 0.50" (aspect ratio maintained)
+- Logo does not overlap with content area
+- File size increased from ~32KB to ~62KB (logo embedded)

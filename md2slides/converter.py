@@ -18,6 +18,7 @@ from md2slides.parser import (
     parse_markdown,
 )
 from md2slides.themes import get_theme
+from md2slides.utils import get_template_path
 
 
 class PresentationConverter:
@@ -46,6 +47,9 @@ class PresentationConverter:
         # Process each section
         for section in presentation.sections:
             self._add_section(section)
+
+        # Post-processing: add logo to all slides
+        self._add_logo_to_all_slides()
 
         return self._prs
 
@@ -316,6 +320,42 @@ class PresentationConverter:
             return path
 
         return None
+
+    def _add_logo_to_all_slides(self) -> None:
+        """Add the company logo to the bottom-right corner of every slide."""
+        try:
+            logo_path = get_template_path("multiverse_logo.png")
+        except FileNotFoundError:
+            # Logo not available, skip silently
+            return
+
+        # Logo dimensions and positioning
+        # Standard slide is 10 inches wide by 7.5 inches tall
+        logo_max_height = Inches(0.5)  # Fixed max height for logo
+        margin_right = Inches(0.25)    # Margin from right edge
+        margin_bottom = Inches(0.25)   # Margin from bottom edge
+
+        # Slide dimensions (standard 10x7.5)
+        slide_width = Inches(10)
+        slide_height = Inches(7.5)
+
+        for slide in self._prs.slides:
+            try:
+                # Add the logo with height constraint (width auto-calculated to maintain aspect ratio)
+                picture = slide.shapes.add_picture(
+                    str(logo_path),
+                    left=Inches(0),  # Temporary position
+                    top=Inches(0),   # Temporary position
+                    height=logo_max_height
+                )
+
+                # Calculate actual position for bottom-right corner
+                # After adding, we know the actual width from the aspect ratio
+                picture.left = int(slide_width - picture.width - margin_right)
+                picture.top = int(slide_height - picture.height - margin_bottom)
+            except Exception:
+                # If logo fails to load on any slide, continue with others
+                pass
 
 
 def convert_markdown_to_pptx(

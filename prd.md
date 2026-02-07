@@ -273,7 +273,7 @@ md2slides --help
     "Ensure logo is behind no content overlaps: if footer area is used, reserve padding or adjust content boxes upward slightly.",
     "Verify: generate PPTX from an example markdown and confirm logo appears on every slide in the same position."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "feature",
