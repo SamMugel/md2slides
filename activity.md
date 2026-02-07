@@ -457,3 +457,37 @@ python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Exist
 - Subtitle does not appear as body text on subsequent slides
 - Existing examples (simple.md, hyperlinks-test.md) continue to work correctly
 - When no paragraph follows H1, no subtitle appears (correct behavior)
+
+### 2026-02-07 - Task 19: Render H2 Paragraphs as Inline Text (Not Bullets)
+
+**Task completed:**
+19. If text appears after an H2 and is not in a list, render it inline (not as a bullet list) in PPTX
+
+**Changes made:**
+- Updated `md2slides/parser.py`:
+  - Added `is_paragraph: bool = True` field to `TextElement` dataclass
+  - Paragraphs are marked with `is_paragraph=True` (default) to distinguish them from list content
+- Updated `md2slides/converter.py`:
+  - Added import for `PP_PARAGRAPH_ALIGNMENT` from `pptx.enum.text`
+  - Added `_disable_bullet()` method that uses XML manipulation to set `<a:buNone>` element
+  - Updated `_add_text_element()` to call `_disable_bullet()` when `element.is_paragraph` is True
+  - This explicitly removes bullet formatting for paragraphs while preserving bullets for list items
+- Created `examples/paragraph-test.md` for testing various paragraph/list combinations
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/*.py  # Syntax check passed
+python -m md2slides --help           # CLI works
+python -m md2slides examples/paragraph-test.md -o paragraph-test.pptx  # Creates PPTX
+python -m md2slides examples/simple.md -o test-output.pptx  # Existing examples work
+python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Existing examples work
+```
+
+**Verification:**
+- Paragraphs in PPTX have `<a:buNone>` element set (verified via XML inspection)
+- List items retain default bullet formatting
+- Slide 2 (paragraphs only): All paragraphs display without bullets
+- Slide 3 (paragraph + list): Intro/outro paragraphs have no bullets, list items have bullets
+- Slide 4 (list only): All items have bullets as expected
+- Slide 5 (mixed): Paragraphs before/after list have no bullets, list items have bullets
+- PPTX XML confirmed: paragraphs show "NO BULLET", list items show "(default/bullet)"

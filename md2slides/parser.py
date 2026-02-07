@@ -25,6 +25,7 @@ class TextElement:
     italic: bool = False
     code: bool = False
     spans: List["InlineSpan"] = field(default_factory=list)  # Rich inline content
+    is_paragraph: bool = True  # True = render without bullet, False = can use bullet
 
 
 @dataclass

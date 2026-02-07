@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from pptx import Presentation as PptxPresentation
+from pptx.enum.text import PP_PARAGRAPH_ALIGNMENT
 from pptx.util import Inches, Pt
 
 from md2slides.parser import (
@@ -398,6 +399,10 @@ class PresentationConverter:
 
         p.level = 0
 
+        # Disable bullets for paragraph elements (not list items)
+        if element.is_paragraph:
+            self._disable_bullet(p)
+
         # If we have spans with rich content (hyperlinks), render those
         if element.spans:
             self._add_spans_to_paragraph(p, element.spans)
@@ -431,6 +436,33 @@ class PresentationConverter:
             if span.code:
                 run.font.name = self._theme.fonts.code_font
                 run.font.size = Pt(self._theme.fonts.code_size)
+
+    def _disable_bullet(self, paragraph) -> None:
+        """Disable bullet formatting for a paragraph.
+
+        This sets the bullet type to None, making the paragraph render
+        as plain text without any bullet character or indentation.
+        """
+        from pptx.oxml.ns import qn
+
+        # Access the paragraph's XML properties
+        pPr = paragraph._p.get_or_add_pPr()
+
+        # Remove any existing bullet settings
+        for bullet_elem in pPr.findall(qn('a:buChar')):
+            pPr.remove(bullet_elem)
+        for bullet_elem in pPr.findall(qn('a:buAutoNum')):
+            pPr.remove(bullet_elem)
+
+        # Add buNone element to explicitly disable bullets
+        buNone = pPr.find(qn('a:buNone'))
+        if buNone is None:
+            from lxml import etree
+            nsmap = {'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
+            buNone = etree.SubElement(pPr, qn('a:buNone'))
+
+        # Reset indentation to remove bullet indent
+        paragraph.level = 0
 
     def _add_bullet_list(
         self, text_frame, bullet_list: BulletList, is_first: bool

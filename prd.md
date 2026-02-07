@@ -334,7 +334,7 @@ md2slides --help
     "Verify in the resulting PPTX XML/PowerPoint UI that the paragraph is not a bulleted list (no bullet indentation, no list formatting).",
     "Verify: example markdown H2 + paragraph + list produces one inline paragraph followed by bullets."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "feature",
