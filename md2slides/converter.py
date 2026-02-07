@@ -17,6 +17,7 @@ from md2slides.parser import (
     TextElement,
     parse_markdown,
 )
+from md2slides.themes import get_theme
 
 
 class PresentationConverter:
@@ -29,7 +30,8 @@ class PresentationConverter:
     LAYOUT_BLANK = 6        # Blank
 
     def __init__(self, theme: str = "default"):
-        self.theme = theme
+        self.theme_name = theme
+        self._theme = get_theme(theme)
         self._prs: Optional[PptxPresentation] = None
 
     def convert(self, presentation: Presentation) -> PptxPresentation:
@@ -75,6 +77,9 @@ class PresentationConverter:
         if subtitle and len(slide.placeholders) > 1:
             subtitle_shape = slide.placeholders[1]
             subtitle_shape.text = subtitle
+
+        # Apply theme styling
+        self._theme.apply_to_title_slide(slide)
 
     def _add_section(self, section: Section) -> None:
         """Add a section's slides to the presentation."""
@@ -122,6 +127,9 @@ class PresentationConverter:
             elif isinstance(element, Table):
                 # Tables need special handling - add as a shape
                 self._add_table(pptx_slide, element)
+
+        # Apply theme styling
+        self._theme.apply_to_content_slide(pptx_slide)
 
     def _add_text_element(
         self, text_frame, element: TextElement, is_first: bool

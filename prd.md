@@ -175,7 +175,7 @@ md2slides --help
       "Apply theme fonts to headings and body",
       "Verify: generated PPTX uses consistent styling"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
