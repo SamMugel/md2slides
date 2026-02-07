@@ -24,3 +24,7 @@ htmlcov/
 
 # macOS
 .DS_Store
+
+# Generated PPTX files (keep templates/template.pptx tracked)
+*.pptx
+!templates/template.pptx

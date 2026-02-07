@@ -568,3 +568,32 @@ python examples/build_examples.py     # Builds all 13 examples successfully
 - Layouts verified: Title Slide, Blank (for custom layouts), Title and Content
 - Logo appears on every slide
 - No network access required - uses examples/test_image.jpeg for all images
+
+### 2026-02-07 - Task 22: Ensure PPTX Files Are Not Version Controlled
+
+**Task completed:**
+22. Ensure PPTX files are not version controlled (ignore outputs and templates as appropriate)
+
+**Changes made:**
+- Updated `.gitignore` to add:
+  ```
+  # Generated PPTX files (keep templates/template.pptx tracked)
+  *.pptx
+  !templates/template.pptx
+  ```
+- Policy: Ignore all generated PPTX outputs, but keep `templates/template.pptx` tracked (as it's a base template file)
+
+**Commands run:**
+```bash
+git ls-files "*.pptx"                    # Confirmed templates/template.pptx is tracked
+git check-ignore -v examples/*.pptx      # Verified generated files are ignored
+git check-ignore templates/template.pptx  # Verified template is NOT ignored
+python examples/build_examples.py         # Regenerated all PPTX files
+git status                                # Confirmed no PPTX files show as untracked
+```
+
+**Verification:**
+- All generated PPTX files (examples/*.pptx, *.pptx in root) are ignored by git
+- templates/template.pptx remains tracked and is not ignored
+- After running build_examples.py, git status shows no PPTX files as untracked/modified
+- No PPTX files need to be removed from git index (none were tracked except template)

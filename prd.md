@@ -368,7 +368,7 @@ md2slides --help
     "Remove any already-tracked PPTX files from git index (git rm --cached ...) while keeping them locally.",
     "Verify: git status does not show generated PPTX files as untracked/modified after generation."
   ],
-  "passes": false
+  "passes": true
 }
 ]
 ```
