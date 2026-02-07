@@ -781,6 +781,96 @@ class TestListFormattingIssue1:
             assert number_count == 2
 
 
+class TestFirstLineIndentation:
+    """Test First line indentation for lists (issue #9)."""
+
+    def test_bullet_uses_first_line_indent(self):
+        """Bullet lists should use positive (First line) indent."""
+        content = """## Slide
+
+- First item
+- Second item
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        if buChar is not None:
+                            indent = pPr.get(qn('a:indent'))
+                            assert indent is not None
+                            # First line indent = positive value
+                            assert int(indent) > 0, f"Expected positive indent (First line), got {indent}"
+
+    def test_numbered_list_uses_first_line_indent(self):
+        """Numbered lists should use positive (First line) indent."""
+        content = """## Slide
+
+1. First step
+2. Second step
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buAutoNum is not None:
+                            indent = pPr.get(qn('a:indent'))
+                            assert indent is not None
+                            # First line indent = positive value
+                            assert int(indent) > 0, f"Expected positive indent (First line), got {indent}"
+
+    def test_nested_lists_use_first_line_indent(self):
+        """Nested lists should also use positive (First line) indent."""
+        content = """## Slide
+
+- Parent bullet
+  - Child bullet
+1. Parent number
+   1. Child number
+"""
+        converter = MarkdownToPptxConverter()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "test.pptx")
+            converter.convert(content, output_path)
+
+            prs = Presentation(output_path)
+            slide = prs.slides[0]
+
+            indent_count = 0
+            for shape in slide.shapes:
+                if hasattr(shape, "text_frame"):
+                    for para in shape.text_frame.paragraphs:
+                        pPr = para._p.get_or_add_pPr()
+                        buChar = pPr.find(qn('a:buChar'))
+                        buAutoNum = pPr.find(qn('a:buAutoNum'))
+                        if buChar is not None or buAutoNum is not None:
+                            indent = pPr.get(qn('a:indent'))
+                            assert indent is not None
+                            # First line indent = positive value
+                            assert int(indent) > 0, f"Expected positive indent (First line), got {indent}"
+                            indent_count += 1
+
+            # Should have 4 list items total
+            assert indent_count == 4
+
+
 class TestLogoPlacement:
     """Test Multiverse Computing logo placement."""
 
