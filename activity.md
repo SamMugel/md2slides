@@ -531,3 +531,40 @@ python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Exist
 - H3 ending with punctuation: "Important Note:" (no extra separator added)
 - Theme does not override the red/bold H3 styling
 - Existing examples (simple.md, hyperlinks-test.md) continue to work correctly
+
+### 2026-02-07 - Task 21: Add Examples and Build Script for PPTX Generation
+
+**Task completed:**
+21. Add examples demonstrating new layout and markdown behavior; output generated PPTX examples into examples/ folder
+
+**Changes made:**
+- Created `examples/all-features.md` - comprehensive example demonstrating all new features:
+  - Logo placement on every slide
+  - Two-column layouts for text and images
+  - Vertical stacking for multiple images
+  - Clickable hyperlinks
+  - H1 subtitle support
+  - Paragraph rendering without bullets
+  - H3 inline headings with bold red styling
+  - Code blocks and tables
+- Created `examples/build_examples.py` - build script that:
+  - Finds all .md files in examples/ directory
+  - Converts each to .pptx using `convert_markdown_to_pptx()`
+  - Changes to examples/ directory for relative image path resolution
+  - Reports success/failure with file sizes
+  - No external network access required (uses local images only)
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/*.py  # Syntax check passed
+python -m md2slides --help            # CLI works
+python examples/build_examples.py     # Builds all 13 examples successfully
+```
+
+**Verification:**
+- Build script generates 13 PPTX files in examples/
+- All conversions succeed with varying file sizes (58-74 KB)
+- all-features.pptx has 10 slides with proper content
+- Layouts verified: Title Slide, Blank (for custom layouts), Title and Content
+- Logo appears on every slide
+- No network access required - uses examples/test_image.jpeg for all images

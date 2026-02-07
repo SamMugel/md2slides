@@ -357,7 +357,7 @@ md2slides --help
     "Ensure the build script does not require external network access (use local images in templates/ or examples/assets/).",
     "Verify: running the script generates PPTX outputs into examples/ as required."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "chore",
