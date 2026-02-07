@@ -22,8 +22,5 @@ dist/
 .coverage
 htmlcov/
 
-# Local agent/editor config
-.claude/
-
 # macOS
 .DS_Store
