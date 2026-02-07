@@ -212,7 +212,7 @@ md2slides --help
       "Use monospace font and appropriate sizing",
       "Verify: code blocks appear with syntax highlighting in slides"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",

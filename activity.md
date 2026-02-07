@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 8
-**Current Task:** Implement code block handling
+**Tasks Completed:** 9
+**Current Task:** Implement table support
 
 ---
 
@@ -184,3 +184,26 @@ python -m md2slides resources/example.md -o image-test.pptx  # Creates PPTX with
 - Images are detected in markdown (![alt](src) syntax)
 - Local images are embedded in slides (file size increased from 32KB to 38KB)
 - Image is positioned and sized appropriately (6.00in x 3.36in)
+
+### 2026-02-07 - Task 9: Implement Code Block Handling
+
+**Task completed:**
+9. Implement code block handling
+
+**Changes made:**
+- Enhanced _add_code_block() in converter.py to use add_run() for proper font styling
+- Updated all theme files to skip code runs when applying body font
+- Code blocks now use Courier New monospace font at 12pt
+- Created examples/code-test.md for testing
+
+**Commands run:**
+```bash
+python -m md2slides examples/code-test.md -o code-test.pptx  # Creates PPTX with code
+```
+
+**Verification:**
+- Code blocks use Courier New font while body text uses Calibri
+- Code blocks preserve indentation and formatting
+- Python and JavaScript code blocks render correctly
+
+**Note:** Pygments syntax highlighting not implemented (package unavailable due to network issues)

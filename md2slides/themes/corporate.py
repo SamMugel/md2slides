@@ -49,6 +49,10 @@ class CorporateTheme(BaseTheme):
 
             for paragraph in shape.text_frame.paragraphs:
                 for run in paragraph.runs:
+                    # Skip code runs (already styled with monospace font)
+                    if run.font.name == self.fonts.code_font:
+                        continue
+
                     if is_title:
                         run.font.name = self.fonts.title_font
                         run.font.size = Pt(self.fonts.title_size)

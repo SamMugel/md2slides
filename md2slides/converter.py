@@ -179,8 +179,13 @@ class PresentationConverter:
     def _add_code_block(
         self, text_frame, code_block: CodeBlock, is_first: bool
     ) -> None:
-        """Add a code block to the text frame."""
+        """Add a code block to the text frame with monospace styling."""
+        from pptx.dml.color import RGBColor
+
         lines = code_block.code.strip().split("\n")
+        code_font = self._theme.fonts.code_font
+        code_size = Pt(self._theme.fonts.code_size)
+        code_color = RGBColor(*self._theme.colors.body_text)
 
         for i, line in enumerate(lines):
             if is_first and i == 0:
@@ -188,13 +193,13 @@ class PresentationConverter:
             else:
                 p = text_frame.add_paragraph()
 
-            p.text = line
+            # Use add_run to ensure we can style the text
+            run = p.add_run()
+            run.text = line
+            run.font.name = code_font
+            run.font.size = code_size
+            run.font.color.rgb = code_color
             p.level = 0
-
-            # Use monospace font for code
-            for run in p.runs:
-                run.font.name = "Courier New"
-                run.font.size = Pt(10)
 
     def _add_table(self, pptx_slide, table: Table) -> None:
         """Add a table to the slide as a separate shape."""
