@@ -2,8 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-07
-**Tasks Completed:** 6
-**Current Task:** Add dark, light, and corporate themes
+**Tasks Completed:** 7
+**Current Task:** Implement image handling
 
 ---
 
@@ -138,3 +138,27 @@ python -m md2slides resources/example.md -o themed-test.pptx  # Creates themed P
 **Verification:**
 - Theme applies title colors (dark blue) and body colors (dark gray)
 - Fonts are applied consistently (Calibri for title/body)
+
+### 2026-02-07 - Task 7: Add Dark, Light, and Corporate Themes
+
+**Task completed:**
+7. Add dark, light, and corporate themes
+
+**Changes made:**
+- Created `md2slides/themes/dark.py` (dark background, light text, bright blue accent)
+- Created `md2slides/themes/light.py` (white background, minimal gray palette, Arial fonts)
+- Created `md2slides/themes/corporate.py` (navy blue titles, Georgia font, bold headings)
+- Updated themes/__init__.py to register all four themes
+
+**Commands run:**
+```bash
+python -m md2slides --list-themes                           # Shows all 4 themes
+python -m md2slides resources/example.md --theme dark -o dark-test.pptx
+python -m md2slides resources/example.md --theme light -o light-test.pptx
+python -m md2slides resources/example.md --theme corporate -o corporate-test.pptx
+```
+
+**Verification:**
+- All four themes (default, dark, light, corporate) produce distinct PPTX files
+- --list-themes shows all available themes
+- --theme flag properly selects the theme

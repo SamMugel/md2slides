@@ -188,7 +188,7 @@ md2slides --help
       "Add --list-themes flag to show available themes",
       "Verify: each theme produces visually distinct output"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "feature",
