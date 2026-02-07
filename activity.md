@@ -426,3 +426,34 @@ python -m md2slides examples/simple.md -o test-output.pptx  # Existing examples 
 - Links are styled with blue color and underline
 - Edge cases handled: multiple links in paragraph, links in list items, trailing punctuation
 - Existing examples convert without errors
+
+### 2026-02-07 - Task 18: Treat Text After H1 as Subtitle
+
+**Task completed:**
+18. Treat text immediately after an H1 as a subtitle for the section/title slide
+
+**Changes made:**
+- Updated `md2slides/parser.py`:
+  - Added `subtitle` field to `Section` dataclass (default empty string)
+  - Added `awaiting_subtitle` flag in `_build_presentation()` to track when a paragraph should be captured as subtitle
+  - When a paragraph appears immediately after H1 (before any H2), it is consumed as `section.subtitle`
+  - Subtitle paragraph is not rendered as regular slide content elsewhere
+- Updated `md2slides/converter.py`:
+  - Modified `convert()` to extract subtitle from first section when it matches the presentation title
+  - Passed subtitle to `_add_title_slide()` which renders it using the existing subtitle placeholder
+- Created `examples/subtitle-test.md` for testing the feature
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/*.py  # Syntax check passed
+python -m md2slides --help            # CLI works
+python -m md2slides examples/subtitle-test.md -o subtitle-test.pptx  # Creates PPTX with subtitle
+python -m md2slides examples/simple.md -o test-output.pptx  # No subtitle when none expected
+python -m md2slides examples/hyperlinks-test.md -o hyperlinks-test.pptx  # Existing features work
+```
+
+**Verification:**
+- Title slide shows: "My Presentation Title" with subtitle "This is the subtitle text that appears right after the H1 title."
+- Subtitle does not appear as body text on subsequent slides
+- Existing examples (simple.md, hyperlinks-test.md) continue to work correctly
+- When no paragraph follows H1, no subtitle appears (correct behavior)

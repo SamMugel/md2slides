@@ -42,9 +42,13 @@ class PresentationConverter:
         """Convert a parsed Presentation to a PowerPoint presentation."""
         self._prs = PptxPresentation()
 
-        # Create title slide from presentation title
+        # Create title slide from presentation title (with subtitle from first section)
         if presentation.title:
-            self._add_title_slide(presentation.title)
+            # Get subtitle from the first section (if it's the title section)
+            subtitle = ""
+            if presentation.sections and presentation.sections[0].title == presentation.title:
+                subtitle = presentation.sections[0].subtitle
+            self._add_title_slide(presentation.title, subtitle)
 
         # Process each section
         for section in presentation.sections:

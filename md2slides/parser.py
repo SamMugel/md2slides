@@ -80,6 +80,7 @@ class Slide:
 class Section:
     """A section of the presentation (defined by H1)."""
     title: str
+    subtitle: str = ""  # Text immediately after H1, before any H2
     slides: List[Slide] = field(default_factory=list)
 
 
@@ -106,6 +107,7 @@ class MarkdownParser:
         presentation = Presentation()
         current_section: Optional[Section] = None
         current_slide: Optional[Slide] = None
+        awaiting_subtitle = False  # True when we just saw an H1 and expect a subtitle
 
         for token in tokens:
             token_type = token.get("type")
@@ -121,9 +123,11 @@ class MarkdownParser:
                     current_section = Section(title=text)
                     presentation.sections.append(current_section)
                     current_slide = None
+                    awaiting_subtitle = True  # Next paragraph could be a subtitle
 
                 elif level == 2:
-                    # H2 creates a new slide
+                    # H2 creates a new slide (and consumes any pending subtitle expectation)
+                    awaiting_subtitle = False
                     current_slide = Slide(title=text)
                     if current_section is None:
                         # Create a default section if none exists
@@ -132,6 +136,17 @@ class MarkdownParser:
                     current_section.slides.append(current_slide)
 
             elif token_type == "paragraph":
+                # Check if this paragraph should be treated as a section subtitle
+                if awaiting_subtitle and current_section is not None and current_slide is None:
+                    # This is the first paragraph after H1, before any H2 - use as subtitle
+                    text = self._extract_text_excluding_images(token.get("children", []))
+                    if text:
+                        current_section.subtitle = text
+                    awaiting_subtitle = False
+                    continue  # Don't process this paragraph as slide content
+
+                awaiting_subtitle = False  # Any other content clears the subtitle expectation
+
                 if current_slide is not None:
                     # Check for images in paragraph
                     images = self._extract_images(token.get("children", []))

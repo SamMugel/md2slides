@@ -322,7 +322,7 @@ md2slides --help
     "Ensure subtitle does not get rendered as a normal body paragraph elsewhere (consume it as subtitle).",
     "Verify: example markdown with H1 + paragraph + H2 renders a title slide with subtitle and subsequent slides unaffected."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "feature",
