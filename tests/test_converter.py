@@ -323,7 +323,8 @@ class TestListFormatting:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             bullet_count += 1
@@ -349,7 +350,8 @@ class TestListFormatting:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             bullet_chars.append(buChar.get('char'))
@@ -378,7 +380,8 @@ class TestListFormatting:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buAutoNum is not None:
                             auto_num_count += 1
@@ -406,7 +409,8 @@ class TestListFormatting:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buAutoNum is not None:
                             num_types.append(buAutoNum.get('type'))
@@ -435,7 +439,8 @@ class TestListFormatting:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buChar is not None:
@@ -679,7 +684,8 @@ class TestListFormattingIssue1:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             # Check indentation is set
@@ -707,7 +713,8 @@ class TestListFormattingIssue1:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buAutoNum is not None:
                             marL = pPr.get(qn('a:marL'))
@@ -736,7 +743,8 @@ class TestListFormattingIssue1:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             marL = int(pPr.get(qn('a:marL')))
@@ -769,7 +777,8 @@ class TestListFormattingIssue1:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buChar is not None:
@@ -802,7 +811,8 @@ class TestFirstLineIndentation:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         if buChar is not None:
                             indent = pPr.get(qn('a:indent'))
@@ -830,7 +840,8 @@ class TestFirstLineIndentation:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buAutoNum is not None:
                             indent = pPr.get(qn('a:indent'))
@@ -861,7 +872,8 @@ class TestFirstLineIndentation:
             for shape in slide.shapes:
                 if hasattr(shape, "text_frame"):
                     for para in shape.text_frame.paragraphs:
-                        pPr = para._p.get_or_add_pPr()
+                        pPr = para._p.pPr
+                        assert pPr is not None
                         buChar = pPr.find(qn('a:buChar'))
                         buAutoNum = pPr.find(qn('a:buAutoNum'))
                         if buChar is not None or buAutoNum is not None:
