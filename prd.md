@@ -249,7 +249,7 @@ md2slides --help
       "Add screenshots of example outputs",
       "Verify: README is clear and complete"
     ],
-    "passes": false
+    "passes": true
   }
 ]
 ```
