@@ -96,6 +96,17 @@ class PresentationConverter:
 
     def _add_content_slide(self, slide: Slide) -> None:
         """Add a content slide to the presentation."""
+        # Check if this slide qualifies for 2-column layout (text + exactly 1 image)
+        images = [e for e in slide.elements if isinstance(e, Image)]
+        text_elements = [e for e in slide.elements if isinstance(e, (TextElement, BulletList, CodeBlock))]
+        tables = [e for e in slide.elements if isinstance(e, Table)]
+
+        if len(images) == 1 and len(text_elements) > 0 and len(tables) == 0:
+            # Use 2-column layout: text on left, image on right
+            self._add_two_column_slide(slide, text_elements, images[0])
+            return
+
+        # Default layout for other slides
         slide_layout = self._prs.slide_layouts[self.LAYOUT_CONTENT]
         pptx_slide = self._prs.slides.add_slide(slide_layout)
 
@@ -142,6 +153,145 @@ class PresentationConverter:
 
         # Apply theme styling
         self._theme.apply_to_content_slide(pptx_slide)
+
+    def _add_two_column_slide(
+        self,
+        slide: Slide,
+        text_elements: list,
+        image: Image
+    ) -> None:
+        """Add a slide with 2-column layout: text on left, image on right."""
+        from pptx.util import Emu
+        from pptx.enum.text import MSO_ANCHOR
+
+        # Use blank layout for custom positioning
+        slide_layout = self._prs.slide_layouts[self.LAYOUT_BLANK]
+        pptx_slide = self._prs.slides.add_slide(slide_layout)
+
+        # Slide dimensions (standard 10" x 7.5")
+        slide_width = Inches(10)
+        slide_height = Inches(7.5)
+
+        # Content area margins
+        margin_left = Inches(0.5)
+        margin_right = Inches(0.5)
+        margin_top = Inches(1.5)  # Space for title
+        margin_bottom = Inches(0.75)  # Space for logo
+
+        # Title area
+        title_left = margin_left
+        title_top = Inches(0.3)
+        title_width = slide_width - margin_left - margin_right
+        title_height = Inches(1.0)
+
+        # Add title text box
+        title_box = pptx_slide.shapes.add_textbox(
+            title_left, title_top, title_width, title_height
+        )
+        title_tf = title_box.text_frame
+        title_tf.word_wrap = True
+        p = title_tf.paragraphs[0]
+        p.text = slide.title
+        p.font.size = Pt(32)
+        p.font.bold = True
+
+        # Content area dimensions
+        content_top = margin_top
+        content_bottom = slide_height - margin_bottom
+        content_height = content_bottom - content_top
+        content_width = slide_width - margin_left - margin_right
+
+        # 2-column split: 55% left (text), 45% right (image), with gutter
+        gutter = Inches(0.3)
+        left_width = content_width * 0.55 - gutter / 2
+        right_width = content_width * 0.45 - gutter / 2
+        left_left = margin_left
+        right_left = margin_left + left_width + gutter
+
+        # Add text content on the left
+        text_box = pptx_slide.shapes.add_textbox(
+            left_left, content_top, left_width, content_height
+        )
+        text_tf = text_box.text_frame
+        text_tf.word_wrap = True
+        text_tf.auto_size = None  # Disable auto-resize
+
+        first_element = True
+        for element in text_elements:
+            if isinstance(element, TextElement):
+                self._add_text_element(text_tf, element, first_element)
+                first_element = False
+            elif isinstance(element, BulletList):
+                self._add_bullet_list(text_tf, element, first_element)
+                first_element = False
+            elif isinstance(element, CodeBlock):
+                self._add_code_block(text_tf, element, first_element)
+                first_element = False
+
+        # Add image on the right, scaled to fit
+        image_path = self._resolve_image_path(image.src)
+        if image_path is not None:
+            self._add_scaled_image(
+                pptx_slide,
+                image_path,
+                left=right_left,
+                top=content_top,
+                max_width=right_width,
+                max_height=content_height
+            )
+
+        # Apply theme styling
+        self._theme.apply_to_content_slide(pptx_slide)
+
+    def _add_scaled_image(
+        self,
+        pptx_slide,
+        image_path,
+        left,
+        top,
+        max_width,
+        max_height
+    ) -> None:
+        """Add an image scaled to fit within the given bounds, preserving aspect ratio."""
+        from PIL import Image as PILImage
+
+        try:
+            # Get original image dimensions
+            with PILImage.open(image_path) as img:
+                orig_width, orig_height = img.size
+
+            # Calculate scale factors
+            width_scale = max_width / Inches(orig_width / 96)  # Assume 96 DPI
+            height_scale = max_height / Inches(orig_height / 96)
+
+            # Use the smaller scale to fit within bounds
+            scale = min(width_scale, height_scale, 1.0)  # Don't upscale beyond original
+
+            # Calculate final dimensions
+            final_width = Inches(orig_width / 96) * scale
+            final_height = Inches(orig_height / 96) * scale
+
+            # Center the image within the right region
+            centered_left = left + (max_width - final_width) / 2
+            centered_top = top + (max_height - final_height) / 2
+
+            pptx_slide.shapes.add_picture(
+                str(image_path),
+                int(centered_left),
+                int(centered_top),
+                width=int(final_width)
+            )
+        except Exception:
+            # Fallback: add image with max width constraint
+            try:
+                pptx_slide.shapes.add_picture(
+                    str(image_path),
+                    int(left),
+                    int(top),
+                    width=int(max_width)
+                )
+            except Exception:
+                pass
 
     def _add_text_element(
         self, text_frame, element: TextElement, is_first: bool

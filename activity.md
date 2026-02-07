@@ -324,3 +324,33 @@ python -m md2slides examples/full-featured.md -o final-test.pptx  # Works with c
 - Logo size: 3.11" x 0.50" (aspect ratio maintained)
 - Logo does not overlap with content area
 - File size increased from ~32KB to ~62KB (logo embedded)
+
+### 2026-02-07 - Task 15: Two-Column Layout for Text+Image Slides
+
+**Task completed:**
+15. When a slide has both text and one image: use a 2-column layout with autoscaled image on the right
+
+**Changes made:**
+- Updated `md2slides/converter.py`:
+  - Added layout detection in `_add_content_slide()` to identify slides with text elements + exactly 1 image
+  - Added `_add_two_column_slide()` method using LAYOUT_BLANK for custom positioning
+  - Content split: 55% left (text), 45% right (image) with 0.3" gutter
+  - Title positioned at top, content below with margins for logo safe area
+  - Added `_add_scaled_image()` method using PIL to calculate optimal image scaling
+  - Image is scaled to fit right region preserving aspect ratio, centered within region
+- Created `examples/two-column-test.md` for testing various slide configurations
+
+**Commands run:**
+```bash
+python -m py_compile md2slides/converter.py  # Syntax check passed
+python -m md2slides examples/two-column-test.md -o two-column-test.pptx  # Creates PPTX
+python -c "from pptx import Presentation; ..."  # Verified layout structure
+```
+
+**Verification:**
+- Slides with text + 1 image use "Blank" layout with 2-column positioning
+- Text content on left: 0.50" from left, 4.80" width (55%)
+- Image on right: 5.99" from left, 3.12" width, centered in right region
+- Slides with no images or 2+ images use standard "Title and Content" layout
+- Logo appears on all slides in correct position
+- Image aspect ratio preserved during scaling

@@ -286,7 +286,7 @@ md2slides --help
     "Autoscale the image to fit the right region preserving aspect ratio: scale by min(width_scale, height_scale) so it fully fits; center within the right region.",
     "Verify: create example markdown with text + image; confirm text is entirely left and image fills right region as much as possible without cropping."
   ],
-  "passes": false
+  "passes": true
 },
 {
   "category": "feature",
