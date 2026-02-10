@@ -6,15 +6,16 @@ First read activity.md to see what was recently accomplished.
 
 ## Start the Application
 
-<!-- START_COMMAND_PLACEHOLDER: Update this section after creating your PRD -->
-Start the site locally. Use the appropriate command for your tech stack:
-- `npm run dev` (for Next.js, Vite, or similar)
-- `pnpm dev` (if using pnpm)
-- `bun dev` (if using Bun)
-- `python3 -m http.server 8000 --bind 127.0.0.1` (for static HTML)
+This is a Python CLI tool (no dev server needed). To test the CLI:
+```bash
+pip install -e .
+python -m md2slides --help
+```
 
-If the port is taken, try another port.
-<!-- END_START_COMMAND_PLACEHOLDER -->
+To run a conversion:
+```bash
+python -m md2slides examples/simple.md -o output.pptx
+```
 
 ## Work on Tasks
 
@@ -23,36 +24,24 @@ Open prd.md and find the single highest priority task where `"passes": false`.
 Work on exactly ONE task:
 1. Implement the change according to the task steps
 2. Run any available checks:
-   - `npm run lint` (if available)
-   - `npm run typecheck` (if available)
-   - `npm run build` (if available)
+   - `python -m py_compile md2slides/*.py` (syntax check)
+   - `python -m md2slides --help` (verify CLI works)
 
-## Verify in Browser
+## Verify Output
 
-After implementing, use agent-browser to verify your work:
+After implementing, verify your work:
 
-1. Open the local server URL:
-   ```
-   agent-browser open http://localhost:3000
-   ```
-
-2. Take a snapshot to see the page structure:
-   ```
-   agent-browser snapshot -i -c
+1. Run the CLI with a test file:
+   ```bash
+   python -m md2slides examples/simple.md -o test-output.pptx
    ```
 
-3. Take a screenshot for visual verification:
-   ```
-   agent-browser screenshot screenshots/[task-name].png
+2. Verify the PPTX was created:
+   ```bash
+   ls -la test-output.pptx
    ```
 
-4. Check for any console errors or layout issues
-
-5. If the task involves interactive elements, test them:
-   ```
-   agent-browser click "[selector]"
-   agent-browser fill "[selector]" "test value"
-   ```
+3. For visual verification, you can open the PPTX in a viewer or use agent-browser if there's a preview available.
 
 ## Log Progress
 

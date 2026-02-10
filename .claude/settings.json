@@ -24,7 +24,10 @@
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pip:*)",
+      "Bash(pip3:*)",
+      "Bash(pytest:*)"
     ],
     "deny": [
       "Bash(sudo:*)",
